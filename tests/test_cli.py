@@ -75,3 +75,36 @@ def test_cmd_paper_fake_broker(tmp_path, capsys):
     assert cli.main(["paper", "--config", str(cfg)]) == 0
     out = capsys.readouterr().out
     assert "paper account (fake)" in out and "approvals pending: 0" in out
+
+
+def test_parser_sentiment_defaults():
+    args = cli.build_parser().parse_args(["sentiment"])
+    assert args.command == "sentiment"
+    assert args.symbols == "SPY,AAPL,MSFT,NVDA,TSLA"
+    assert args.window_hours == 24
+    assert args.min_conviction == 5.0
+
+
+def test_cmd_sentiment_runs(monkeypatch, capsys):
+    from trade_suite import pipeline
+    import sys
+    import types
+
+    class _Pop:
+        symbol = "XYZ"
+        bullishness = 8.0
+        conviction = 7.5
+        n_mentions = 40
+        volume_zscore = 3.1
+        tone_shift = 0.2
+        drivers = ["calls"]
+        verdict = "XYZ has a pop in sentiment of 8.0/10 bullishness"
+
+    mod = types.ModuleType("trade_sentiment")
+    mod.scan = lambda symbols, window_hours=24, min_mentions=5: [_Pop()]
+    monkeypatch.setitem(sys.modules, "trade_sentiment", mod)
+
+    assert cli.main(["sentiment", "--symbols", "XYZ"]) == 0
+    out = capsys.readouterr().out
+    assert "Sentiment scan (24h)" in out
+    assert "8.0/10 bullishness" in out

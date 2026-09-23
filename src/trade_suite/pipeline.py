@@ -136,6 +136,62 @@ def paper_overview(config_path: str = "paper-config.json") -> dict:
         ledger.close()
 
 
+def sentiment_scan(
+    symbols: list[str],
+    window_hours: int = 24,
+    min_mentions: int = 5,
+    min_conviction: float = 5.0,
+) -> dict:
+    """Scan ``symbols`` for social/news sentiment pops (trade-sentiment).
+
+    Unlike the research workflows above this talks to ``trade-sentiment``
+    directly — the engine of record for chatter — rather than the
+    dashboard services.  Returns the scan window, one verdict string per
+    pop, and the pops themselves as plain data (dual 0-10 scores:
+    ``bullishness_10`` = pure tone, ``conviction_10`` = tone x volume).
+    The same engine feeds the trade-agents ``sentiment_scout`` researcher.
+    """
+    try:
+        from trade_sentiment import scan as engine_scan
+    except ImportError as exc:
+        raise RuntimeError(
+            "sentiment scans need the trade-sentiment package installed "
+            "(pip install git+https://github.com/crieck2010/trade-sentiment.git)"
+        ) from exc
+
+    symbols = [s.strip().upper() for s in symbols if s and s.strip()]
+    if not symbols:
+        raise ValueError("at least one symbol is required")
+    pops = engine_scan(symbols, window_hours=window_hours,
+                       min_mentions=min_mentions)
+    pops = [p for p in pops if p.conviction >= min_conviction]
+    return {
+        "window_hours": window_hours,
+        "symbols": symbols,
+        "verdicts": [p.verdict for p in pops],
+        "pops": [
+            {"symbol": p.symbol,
+             "bullishness_10": p.bullishness,
+             "conviction_10": p.conviction,
+             "n_mentions": p.n_mentions,
+             "volume_zscore": round(p.volume_zscore, 2),
+             "tone_shift": round(p.tone_shift, 3),
+             "drivers": p.drivers,
+             "verdict": p.verdict}
+            for p in pops
+        ],
+    }
+
+
+def summarize_sentiment(scan_result: dict) -> str:
+    """One-screen text summary of a sentiment scan."""
+    lines = [f"Sentiment scan ({scan_result['window_hours']}h): "
+             f"{len(scan_result['pops'])} pops "
+             f"across {len(scan_result['symbols'])} symbols"]
+    lines.extend(f"  {v}" for v in scan_result["verdicts"][:10])
+    return "\n".join(lines)
+
+
 def summarize_desk(report: dict) -> str:
     """One-screen text summary of a desk report."""
     n_ideas = sum(len(b["ideas"]) for b in report["briefs"])

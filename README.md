@@ -1,13 +1,13 @@
 # trade-suite
 
 The meta-package for the **trade-suite** algorithmic and agentic trading
-system: one install for all eleven modules, environment introspection,
+system: one install for all twelve modules, environment introspection,
 end-to-end research workflows, and a unified CLI.
 
 > **Research tooling only.** Backtesting, research, and paper-trading
 > software. It does not trade live and it is not investment advice.
 
-## The eleven modules
+## The twelve modules
 
 | Module | Role |
 |---|---|
@@ -20,6 +20,7 @@ end-to-end research workflows, and a unified CLI.
 | [trade-risk](https://github.com/crieck2010/trade-risk) | Risk limits, sizers, drawdown guards |
 | [trade-agents](https://github.com/crieck2010/trade-agents) | Agentic research desk (scouts → portfolio manager → risk manager) |
 | [trade-paper](https://github.com/crieck2010/trade-paper) | Paper-trading execution engine (Alpaca paper, 3×-daily runner, approval queue) |
+| [trade-sentiment](https://github.com/crieck2010/trade-sentiment) | Social/news sentiment engine (Reddit, StockTwits, news RSS; feeds the agents' `sentiment_scout`) |
 | [trade-dashboard-web](https://github.com/crieck2010/trade-dashboard-web) | Web dashboard |
 | [trade-dashboard-desktop](https://github.com/crieck2010/trade-dashboard-desktop) | Desktop dashboard (tkinter) |
 
@@ -62,6 +63,12 @@ trade-suite demo --symbols SPY,AAPL --days 250
 trade-suite backtest --strategy donchian_breakout --symbols SPY \
     --params entry=20,exit=10 --source demo --days 250
 
+# scan social/news sentiment pops (Reddit, StockTwits, news RSS)
+trade-suite sentiment --symbols SPY,AAPL,NVDA --window-hours 24
+
+# paper-trading overview (paper only, never live)
+trade-suite paper --config paper-config.json
+
 # launch a dashboard
 trade-suite launch web
 trade-suite launch desktop
@@ -99,6 +106,10 @@ print(len(review["approved"]), "approved,", len(review["vetoed"]), "vetoed")
 
 # desk -> backtest -> risk review in one call
 out = pipeline.research_pipeline(["SPY"], backtest_strategy="donchian_breakout")
+
+# social/news sentiment pops (trade-sentiment engine)
+scan = pipeline.sentiment_scan(["SPY", "NVDA"], window_hours=24)
+print(pipeline.summarize_sentiment(scan))
 ```
 
 See `examples/end_to_end_demo.py` for a runnable script.
@@ -173,11 +184,11 @@ either dashboard from the `trade-suite launch` command.
 PYTHONPATH=src:../trade-dashboard-web/src:../trade-dashboard-desktop/src:\
 ../trade-data-equities/src:../trade-data-options/src:../trade-data-futures/src:\
 ../trade-data-crypto/src:../trade-backtest/src:../trade-strategies/src:\
-../trade-risk/src:../trade-agents/src \
+../trade-risk/src:../trade-agents/src:../trade-sentiment/src \
   python -m pytest tests/ -q
 ```
 
-28 tests. Sibling-dependent tests use `pytest.importorskip`, so the suite
+38 tests. Sibling-dependent tests use `pytest.importorskip`, so the suite
 also runs (partially skipped) against a bare install.
 
 ## Changelog / License

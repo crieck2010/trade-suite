@@ -5,7 +5,7 @@
 `trade-suite` contains no trading logic of its own. It is the **composition
 root** of the system:
 
-1. **One install** — `pyproject.toml` declares all eleven modules as
+1. **One install** — `pyproject.toml` declares all twelve modules as
    `git+https` dependencies, so `pip install
    git+https://github.com/crieck2010/trade-suite.git` provisions the whole
    system.
@@ -21,13 +21,14 @@ root** of the system:
 ```
 ┌──────────────────────────────────────────────────────────┐
 │ trade-suite (this repo)                                  │
-│  env.py        registry: 11 modules, roles, repo URLs     │
+│  env.py        registry: 12 modules, roles, repo URLs     │
 │  data.py       get_bars → dashboard DataService           │
 │  pipeline.py   run_desk / run_backtest / evaluate_orders │
 │                research_pipeline (desk→backtest→risk)     │
 │                paper_overview (trade-paper state)         │
+│                sentiment_scan (trade-sentiment pops)      │
 │  cli.py        status | doctor | demo | backtest |        │
-│                paper | launch                             │
+│                paper | sentiment | launch                 │
 ├──────────────────────────────────────────────────────────┤
 │ dashboards (services reused, not reimplemented)           │
 │  trade-dashboard-web.engine  ← preferred service impl     │
@@ -36,6 +37,7 @@ root** of the system:
 │ engines (lazy imports everywhere)                         │
 │  trade-data-* → trade-strategies → trade-backtest        │
 │  trade-risk → trade-agents → trade-paper (paper only)    │
+│  trade-sentiment → trade-agents (sentiment_scout)        │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -81,6 +83,12 @@ Every stage returns plain dicts/lists. Nothing engine-typed crosses a
 stage boundary, which keeps results JSON-serializable and lets any stage be
 replaced (e.g. a remote backtest service) without touching the others.
 
+A second, lighter flow bypasses the dashboards entirely:
+`pipeline.sentiment_scan` calls the `trade-sentiment` engine directly
+(plain-data pops in, plain-data verdicts out). The same engine feeds the
+trade-agents `sentiment_scout`, so a CLI scan and a desk run see the same
+pops — one engine, two consumers, no duplicated logic.
+
 ## Scaling seams
 
 - **Process boundary**: because stages communicate in plain data, the
@@ -93,7 +101,7 @@ replaced (e.g. a remote backtest service) without touching the others.
 
 ## Versioning
 
-The meta-package versions independently (`0.1.0` here). It does not pin
+The meta-package versions independently (`0.1.2` here). It does not pin
 sibling versions — each module follows semver, and the registry records the
 installed version at runtime (`trade-suite status`) rather than at install
 time. A breaking sibling release is handled by bumping the git dependency

@@ -9,6 +9,7 @@ git+https://github.com/crieck2010/trade-strategies.git
 git+https://github.com/crieck2010/trade-risk.git
 git+https://github.com/crieck2010/trade-agents.git
 git+https://github.com/crieck2010/trade-paper.git
+git+https://github.com/crieck2010/trade-sentiment.git
 git+https://github.com/crieck2010/trade-dashboard-web.git
 git+https://github.com/crieck2010/trade-dashboard-desktop.git
 # optional: real delayed equity data

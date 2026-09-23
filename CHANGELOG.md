@@ -4,6 +4,21 @@ All notable changes to `trade-suite` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.1.2] - 2026-09-23
+
+### Added
+- Wired in the new **trade-sentiment** social/news sentiment engine as the
+  twelfth module: git-URL dependency in `pyproject.toml` /
+  `requirements.txt`, registry entry in `trade_suite.env`, new
+  `trade_suite.sentiment_scan()` workflow (plain-data pops and verdicts,
+  configurable window / mention / conviction bars), and a
+  `trade-suite sentiment --symbols --window-hours --min-mentions
+  --min-conviction` CLI command. The same engine feeds the trade-agents
+  `sentiment_scout`, so the CLI and the desk see identical pops.
+- README quickstart and Python API examples cover the sentiment flow;
+  `docs/ARCHITECTURE.md` documents the direct-to-engine data flow and the
+  one-engine-two-consumers design.
+
 ## [0.1.1] - 2026-09-23
 
 ### Added

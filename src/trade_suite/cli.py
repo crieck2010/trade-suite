@@ -1,4 +1,4 @@
-"""Unified CLI: ``trade-suite status|doctor|demo|backtest|paper|launch``."""
+"""Unified CLI: ``trade-suite status|doctor|demo|backtest|paper|sentiment|launch``."""
 
 from __future__ import annotations
 
@@ -101,6 +101,19 @@ def cmd_launch(args) -> int:
     return subprocess.call([exe, *args.extra])
 
 
+def cmd_sentiment(args) -> int:
+    from . import pipeline
+
+    symbols = _parse_symbols(args.symbols)
+    print(f"Scanning sentiment ({args.window_hours}h window): "
+          f"{', '.join(symbols)} …")
+    scan = pipeline.sentiment_scan(
+        symbols, window_hours=args.window_hours,
+        min_mentions=args.min_mentions, min_conviction=args.min_conviction)
+    print(pipeline.summarize_sentiment(scan))
+    return 0
+
+
 def cmd_paper(args) -> int:
     from . import pipeline
     view = pipeline.paper_overview(args.config)
@@ -150,6 +163,16 @@ def build_parser() -> argparse.ArgumentParser:
     paper.add_argument("--config", default="paper-config.json",
                        help="path to the trade-paper config")
 
+    sent = sub.add_parser("sentiment", help="scan social/news sentiment pops")
+    sent.add_argument("--symbols", default="SPY,AAPL,MSFT,NVDA,TSLA",
+                      help="comma-separated symbols")
+    sent.add_argument("--window-hours", type=int, default=24,
+                      help="chatter window in hours")
+    sent.add_argument("--min-mentions", type=int, default=5,
+                      help="minimum mentions to count as a pop")
+    sent.add_argument("--min-conviction", type=float, default=5.0,
+                      help="0-10 conviction bar for keeping a pop")
+
     return parser
 
 
@@ -161,6 +184,7 @@ def main(argv: list[str] | None = None) -> int:
         "demo": cmd_demo,
         "backtest": cmd_backtest,
         "paper": cmd_paper,
+        "sentiment": cmd_sentiment,
         "launch": cmd_launch,
     }
     try:
