@@ -5,7 +5,7 @@
 `trade-suite` contains no trading logic of its own. It is the **composition
 root** of the system:
 
-1. **One install** — `pyproject.toml` declares all ten modules as
+1. **One install** — `pyproject.toml` declares all eleven modules as
    `git+https` dependencies, so `pip install
    git+https://github.com/crieck2010/trade-suite.git` provisions the whole
    system.
@@ -21,11 +21,13 @@ root** of the system:
 ```
 ┌──────────────────────────────────────────────────────────┐
 │ trade-suite (this repo)                                  │
-│  env.py        registry: 10 modules, roles, repo URLs     │
+│  env.py        registry: 11 modules, roles, repo URLs     │
 │  data.py       get_bars → dashboard DataService           │
 │  pipeline.py   run_desk / run_backtest / evaluate_orders │
 │                research_pipeline (desk→backtest→risk)     │
-│  cli.py        status | doctor | demo | backtest | launch │
+│                paper_overview (trade-paper state)         │
+│  cli.py        status | doctor | demo | backtest |        │
+│                paper | launch                             │
 ├──────────────────────────────────────────────────────────┤
 │ dashboards (services reused, not reimplemented)           │
 │  trade-dashboard-web.engine  ← preferred service impl     │
@@ -33,7 +35,7 @@ root** of the system:
 ├──────────────────────────────────────────────────────────┤
 │ engines (lazy imports everywhere)                         │
 │  trade-data-* → trade-strategies → trade-backtest        │
-│  trade-risk → trade-agents                               │
+│  trade-risk → trade-agents → trade-paper (paper only)    │
 └──────────────────────────────────────────────────────────┘
 ```
 

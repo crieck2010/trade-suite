@@ -92,6 +92,50 @@ def research_pipeline(
     return {"desk": desk, "backtest": backtest, "risk": risk}
 
 
+def paper_overview(config_path: str = "paper-config.json") -> dict:
+    """One-screen paper-trading state from the ``trade-paper`` engine.
+
+    Unlike the research workflows above this talks to ``trade-paper``
+    directly — the engine of record for execution — rather than the
+    dashboard services.  Returns account, positions, and the approval
+    queue as plain data.  Paper only: ``trade-paper`` refuses live
+    brokers in code, so this can never report or touch live state.
+    """
+    try:
+        from trade_paper.brokers import make_broker
+        from trade_paper.config import PaperConfig
+        from trade_paper.ledger import Ledger
+    except ImportError as exc:
+        raise RuntimeError(
+            "paper workflows need the trade-paper package installed "
+            "(pip install git+https://github.com/crieck2010/trade-paper.git)"
+        ) from exc
+
+    cfg = PaperConfig.load(config_path)
+    broker, ledger = make_broker(cfg), Ledger(cfg.db_path)
+    try:
+        acct = broker.get_account()
+        positions = broker.get_positions()
+        pending = ledger.list_approvals(status="pending")
+        return {
+            "broker": broker.name, "paper_only": True,
+            "equity": round(acct.equity, 2), "cash": round(acct.cash, 2),
+            "buying_power": round(acct.buying_power, 2),
+            "market_open": broker.is_market_open(),
+            "positions": [{"symbol": p.symbol, "qty": p.quantity,
+                           "unrealized": round(p.unrealized_pnl, 2)}
+                          for p in positions],
+            "pending_approvals": [
+                {"id": r["id"], "strategy": r["strategy"],
+                 "symbols": r["symbols"],
+                 "score": r["metrics"].get("score")}
+                for r in pending],
+            "active_strategies": len(ledger.active_strategies()),
+        }
+    finally:
+        ledger.close()
+
+
 def summarize_desk(report: dict) -> str:
     """One-screen text summary of a desk report."""
     n_ideas = sum(len(b["ideas"]) for b in report["briefs"])

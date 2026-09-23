@@ -54,3 +54,24 @@ def test_cmd_backtest_runs():
 def test_main_entry_point():
     from trade_suite import __main__  # noqa: F401  (import check)
     assert callable(cli.main)
+
+
+def test_parser_paper_defaults():
+    args = cli.build_parser().parse_args(["paper"])
+    assert args.command == "paper" and args.config == "paper-config.json"
+
+
+def test_cmd_paper_fake_broker(tmp_path, capsys):
+    pytest.importorskip("trade_paper")
+    import json
+    cfg = tmp_path / "paper-config.json"
+    cfg.write_text(json.dumps({
+        "broker": {"name": "fake"},
+        "data_source": "demo",
+        "db_path": str(tmp_path / "trade-paper.db"),
+        "symbols_equities": ["AAA"],
+        "symbols_crypto": [],
+    }))
+    assert cli.main(["paper", "--config", str(cfg)]) == 0
+    out = capsys.readouterr().out
+    assert "paper account (fake)" in out and "approvals pending: 0" in out

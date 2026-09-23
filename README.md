@@ -1,13 +1,13 @@
 # trade-suite
 
 The meta-package for the **trade-suite** algorithmic and agentic trading
-system: one install for all ten modules, environment introspection,
+system: one install for all eleven modules, environment introspection,
 end-to-end research workflows, and a unified CLI.
 
 > **Research tooling only.** Backtesting, research, and paper-trading
 > software. It does not trade live and it is not investment advice.
 
-## The ten modules
+## The eleven modules
 
 | Module | Role |
 |---|---|
@@ -19,6 +19,7 @@ end-to-end research workflows, and a unified CLI.
 | [trade-strategies](https://github.com/crieck2010/trade-strategies) | Strategy library (19 strategies, 7 families) |
 | [trade-risk](https://github.com/crieck2010/trade-risk) | Risk limits, sizers, drawdown guards |
 | [trade-agents](https://github.com/crieck2010/trade-agents) | Agentic research desk (scouts → portfolio manager → risk manager) |
+| [trade-paper](https://github.com/crieck2010/trade-paper) | Paper-trading execution engine (Alpaca paper, 3×-daily runner, approval queue) |
 | [trade-dashboard-web](https://github.com/crieck2010/trade-dashboard-web) | Web dashboard |
 | [trade-dashboard-desktop](https://github.com/crieck2010/trade-dashboard-desktop) | Desktop dashboard (tkinter) |
 
@@ -120,7 +121,7 @@ trade-suite/
 ├── docs/ARCHITECTURE.md
 ├── requirements.txt               # one-line-per-module install
 ├── CHANGELOG.md / LICENSE (MIT)
-└── pyproject.toml                 # git-URL dependencies for all 10 modules
+└── pyproject.toml                 # git-URL dependencies for all 11 modules
 ```
 
 ## Interoperability & scaling notes

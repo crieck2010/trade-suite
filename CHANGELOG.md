@@ -4,6 +4,18 @@ All notable changes to `trade-suite` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-09-23
+
+### Added
+- Wired in the new **trade-paper** paper-trading engine: git-URL dependency
+  in `pyproject.toml` / `requirements.txt`, registry entry in
+  `trade_suite.env` (eleven modules), new `trade_suite.paper_overview()`
+  workflow, and a `trade-suite paper --config` CLI command printing the
+  paper account, positions, active strategies, and the strategy-approval
+  queue.
+- Both dashboards' new **Paper** tabs (v0.1.1 releases) monitor the same
+  `trade-paper` engine.
+
 ## [0.1.0] - 2026-09-23
 
 ### Added

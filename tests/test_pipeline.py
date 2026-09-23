@@ -75,3 +75,40 @@ def test_research_pipeline_demo():
                                      backtest_params={"entry": 20, "exit": 10})
     assert {"desk", "backtest", "risk"} <= set(out)
     assert out["backtest"]["final_equity"] > 0
+
+
+def _paper_config(tmp_path):
+    import json
+    p = tmp_path / "paper-config.json"
+    p.write_text(json.dumps({
+        "broker": {"name": "fake"},
+        "data_source": "demo",
+        "db_path": str(tmp_path / "trade-paper.db"),
+        "symbols_equities": ["AAA"],
+        "symbols_crypto": [],
+    }))
+    return str(p)
+
+
+def test_paper_overview_fake_broker(tmp_path):
+    pytest.importorskip("trade_paper")
+    view = pipeline.paper_overview(_paper_config(tmp_path))
+    assert view["paper_only"] and view["broker"] == "fake"
+    assert view["equity"] == 100000.0
+    assert view["positions"] == []
+    assert view["pending_approvals"] == []
+    assert view["active_strategies"] == 0
+
+
+def test_paper_overview_missing_engine_errors(monkeypatch, tmp_path):
+    import builtins
+    real_import = builtins.__import__
+
+    def fake_import(name, *args, **kwargs):
+        if name.startswith("trade_paper"):
+            raise ImportError("no trade_paper")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    with pytest.raises(RuntimeError, match="trade-paper"):
+        pipeline.paper_overview(str(tmp_path / "paper-config.json"))

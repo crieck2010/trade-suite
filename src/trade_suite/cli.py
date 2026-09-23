@@ -1,4 +1,4 @@
-"""Unified CLI: ``trade-suite status|doctor|demo|backtest|launch``."""
+"""Unified CLI: ``trade-suite status|doctor|demo|backtest|paper|launch``."""
 
 from __future__ import annotations
 
@@ -101,6 +101,22 @@ def cmd_launch(args) -> int:
     return subprocess.call([exe, *args.extra])
 
 
+def cmd_paper(args) -> int:
+    from . import pipeline
+    view = pipeline.paper_overview(args.config)
+    print(f"paper account ({view['broker']}): equity ${view['equity']:,.2f} · "
+          f"cash ${view['cash']:,.2f} · buying power ${view['buying_power']:,.2f} · "
+          f"{'market OPEN' if view['market_open'] else 'market closed'}")
+    print(f"positions: {len(view['positions'])} · "
+          f"active strategies: {view['active_strategies']} · "
+          f"approvals pending: {len(view['pending_approvals'])}")
+    for a in view["pending_approvals"]:
+        score = a["score"]
+        print(f"  #{a['id']} {a['strategy']} [{a['symbols']}]"
+              + (f" score={score:.2f}" if score is not None else ""))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="trade-suite",
@@ -130,6 +146,10 @@ def build_parser() -> argparse.ArgumentParser:
     launch.add_argument("extra", nargs=argparse.REMAINDER,
                         help="extra args passed to the dashboard")
 
+    paper = sub.add_parser("paper", help="paper-trading overview (paper only)")
+    paper.add_argument("--config", default="paper-config.json",
+                       help="path to the trade-paper config")
+
     return parser
 
 
@@ -140,6 +160,7 @@ def main(argv: list[str] | None = None) -> int:
         "doctor": cmd_doctor,
         "demo": cmd_demo,
         "backtest": cmd_backtest,
+        "paper": cmd_paper,
         "launch": cmd_launch,
     }
     try:

@@ -10,5 +10,5 @@ Research/backtesting/paper-trading tooling only — no live trading.
 
 from . import env
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __all__ = ["env", "__version__"]

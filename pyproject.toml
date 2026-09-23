@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trade-suite"
-version = "0.1.0"
+version = "0.1.1"
 description = "Meta-package tying together the trade-suite algorithmic/agentic trading system: one install, environment introspection, end-to-end research workflows, and a unified CLI"
 readme = "README.md"
 license = { text = "MIT" }
@@ -26,6 +26,7 @@ dependencies = [
     "trade-strategies @ git+https://github.com/crieck2010/trade-strategies.git",
     "trade-risk @ git+https://github.com/crieck2010/trade-risk.git",
     "trade-agents @ git+https://github.com/crieck2010/trade-agents.git",
+    "trade-paper @ git+https://github.com/crieck2010/trade-paper.git",
     "trade-dashboard-web @ git+https://github.com/crieck2010/trade-dashboard-web.git",
     "trade-dashboard-desktop @ git+https://github.com/crieck2010/trade-dashboard-desktop.git",
 ]
