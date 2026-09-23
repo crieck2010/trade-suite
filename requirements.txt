@@ -1,0 +1,14 @@
+# Alternative install path: pip install -r requirements.txt
+# (equivalent to the dependencies declared in pyproject.toml)
+git+https://github.com/crieck2010/trade-data-equities.git
+git+https://github.com/crieck2010/trade-data-options.git
+git+https://github.com/crieck2010/trade-data-futures.git
+git+https://github.com/crieck2010/trade-data-crypto.git
+git+https://github.com/crieck2010/trade-backtest.git
+git+https://github.com/crieck2010/trade-strategies.git
+git+https://github.com/crieck2010/trade-risk.git
+git+https://github.com/crieck2010/trade-agents.git
+git+https://github.com/crieck2010/trade-dashboard-web.git
+git+https://github.com/crieck2010/trade-dashboard-desktop.git
+# optional: real delayed equity data
+# yfinance

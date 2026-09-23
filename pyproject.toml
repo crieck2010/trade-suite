@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trade-suite"
+version = "0.1.0"
+description = "Meta-package tying together the trade-suite algorithmic/agentic trading system: one install, environment introspection, end-to-end research workflows, and a unified CLI"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "crieck2010" }]
+requires-python = ">=3.10"
+keywords = ["trading", "backtesting", "quantitative", "agents", "dashboard"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Office/Business :: Financial",
+]
+dependencies = [
+    "trade-data-equities @ git+https://github.com/crieck2010/trade-data-equities.git",
+    "trade-data-options @ git+https://github.com/crieck2010/trade-data-options.git",
+    "trade-data-futures @ git+https://github.com/crieck2010/trade-data-futures.git",
+    "trade-data-crypto @ git+https://github.com/crieck2010/trade-data-crypto.git",
+    "trade-backtest @ git+https://github.com/crieck2010/trade-backtest.git",
+    "trade-strategies @ git+https://github.com/crieck2010/trade-strategies.git",
+    "trade-risk @ git+https://github.com/crieck2010/trade-risk.git",
+    "trade-agents @ git+https://github.com/crieck2010/trade-agents.git",
+    "trade-dashboard-web @ git+https://github.com/crieck2010/trade-dashboard-web.git",
+    "trade-dashboard-desktop @ git+https://github.com/crieck2010/trade-dashboard-desktop.git",
+]
+
+[project.optional-dependencies]
+live = ["yfinance"]
+
+[project.scripts]
+trade-suite = "trade_suite.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/crieck2010/trade-suite"
+Repository = "https://github.com/crieck2010/trade-suite"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
