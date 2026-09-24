@@ -48,7 +48,12 @@ def _block_engine(monkeypatch, package: str):
         monkeypatch.delitem(sys.modules, mod)
 
 
+def _need_dashboard():
+    pytest.importorskip("trade_dashboard_web")
+
+
 def test_pairs_missing_engine_errors(monkeypatch):
+    _need_dashboard()
     _block_engine(monkeypatch, "trade_pairs")
     with pytest.raises(RuntimeError, match="trade-pairs"):
         pipeline.run_pairs_screen(["SPY", "AAPL"])
@@ -71,6 +76,7 @@ def test_pairs_demo():
 
 
 def test_orderbook_missing_engine_errors(monkeypatch):
+    _need_dashboard()
     _block_engine(monkeypatch, "trade_orderbook")
     with pytest.raises(RuntimeError, match="trade-orderbook"):
         pipeline.run_orderbook_sim()
@@ -93,6 +99,7 @@ def test_orderbook_demo():
 
 
 def test_optimize_missing_engine_errors(monkeypatch):
+    _need_dashboard()
     _block_engine(monkeypatch, "trade_optimize")
     with pytest.raises(RuntimeError, match="trade-optimize"):
         pipeline.run_optimize(["SPY", "AAPL"])
@@ -121,6 +128,7 @@ def test_optimize_rejects_unknown_method():
 
 
 def test_montecarlo_missing_engine_errors(monkeypatch):
+    _need_dashboard()
     _block_engine(monkeypatch, "trade_montecarlo")
     with pytest.raises(RuntimeError, match="trade-montecarlo"):
         pipeline.run_montecarlo(["SPY"])
@@ -138,6 +146,7 @@ def test_montecarlo_demo():
 
 
 def test_volsurface_missing_engine_errors(monkeypatch):
+    _need_dashboard()
     _block_engine(monkeypatch, "trade_volsurface")
     with pytest.raises(RuntimeError, match="trade-volsurface"):
         pipeline.run_vol_surface()
@@ -152,6 +161,7 @@ def test_volsurface_demo():
 
 
 def test_factors_missing_engine_errors(monkeypatch):
+    _need_dashboard()
     _block_engine(monkeypatch, "trade_factors")
     with pytest.raises(RuntimeError, match="trade-factors"):
         pipeline.run_factor_analysis(["SPY"])
@@ -173,6 +183,7 @@ def test_factors_demo():
 
 
 def test_sentiment_price_missing_engine_errors(monkeypatch):
+    _need_dashboard()
     _block_engine(monkeypatch, "trade_sentiment_vs_price")
     with pytest.raises(RuntimeError, match="trade-sentiment-vs-price"):
         pipeline.run_sentiment_price("DEMO")
@@ -184,6 +195,7 @@ def test_sentiment_price_validates_symbol():
 
 
 def test_sentiment_price_rejects_non_demo_without_rows():
+    _need_dashboard()
     pytest.importorskip("trade_sentiment_vs_price")
     with pytest.raises(ValueError, match="sentiment_rows"):
         pipeline.run_sentiment_price("SPY", source="equities")

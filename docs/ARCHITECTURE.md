@@ -68,10 +68,9 @@ workflow per engine that
 
 This keeps three consumers — the `trade-suite` CLI, scripted Python, and
 both dashboards' Research Lab tabs — running the **same** code path, so a
-scripted run and a dashboard run of the same job agree exactly. The
-dashboards mirror the pattern one level down: each dashboard's engine
-service module calls the same workflow functions, and each UI tab only
-renders the plain-data result.
+scripted run and a dashboard run of the same job agree exactly: the
+meta-package delegates to the dashboard engine services, and each UI tab
+only renders the plain-data result.
 
 ### Scaling notes
 
