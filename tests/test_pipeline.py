@@ -29,6 +29,7 @@ def test_get_bars_many_keys_uppercase():
 
 
 def test_get_bars_many_validates():
+    pytest.importorskip("trade_dashboard_web")
     with pytest.raises(ValueError):
         data.get_bars_many(["  "], source="demo")
 
