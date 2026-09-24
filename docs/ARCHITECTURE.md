@@ -5,7 +5,7 @@
 `trade-suite` contains no trading logic of its own. It is the **composition
 root** of the system:
 
-1. **One install** — `pyproject.toml` declares all nineteen modules as
+1. **One install** — `pyproject.toml` declares all twenty modules as
    `git+https` dependencies, so `pip install
    git+https://github.com/crieck2010/trade-suite.git` provisions the whole
    system.
@@ -21,7 +21,7 @@ root** of the system:
 ```
 ┌──────────────────────────────────────────────────────────┐
 │ trade-suite (this repo)                                  │
-│  env.py        registry: 19 modules, roles, repo URLs     │
+│  env.py        registry: 20 modules, roles, repo URLs     │
 │  data.py       get_bars → dashboard DataService           │
 │  pipeline.py   run_desk / run_backtest / evaluate_orders │
 │                research_pipeline (desk→backtest→risk)     │
@@ -52,9 +52,9 @@ root** of the system:
 └──────────────────────────────────────────────────────────┘
 ```
 
-## The research-lab wiring pattern (0.2.0)
+## The research-lab wiring pattern (0.2.0, extended 0.3.0)
 
-The seven quant engines are wired in exactly like `trade-paper` and
+The eight quant engines are wired in exactly like `trade-paper` and
 `trade-sentiment` were: the meta-package holds **no logic of its own**.
 Each engine stays the single engine of record; `pipeline.py` adds one thin
 workflow per engine that

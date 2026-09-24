@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trade-suite"
-version = "0.2.0"
+version = "0.3.0"
 description = "Meta-package tying together the trade-suite algorithmic/agentic trading system: one install, environment introspection, end-to-end research workflows, and a unified CLI"
 readme = "README.md"
 license = { text = "MIT" }

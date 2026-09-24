@@ -377,6 +377,30 @@ def run_sentiment_price(
         symbol, bars=bars, sentiment_rows=sentiment_rows, days=days)
 
 
+def run_correlation(
+    symbols: list[str],
+    source: str = "demo",
+    days: int = 365,
+    method: str = "pearson",
+    shrinkage: str = "ledoit_wolf",
+    lookback: int = 252,
+) -> dict:
+    """Correlation/EDA report over a symbol universe (trade-eda).
+
+    Returns the Pearson/Spearman matrix, Ledoit-Wolf shrunk covariance,
+    per-asset summary stats, data-quality flags, and diversification
+    stats (mean/max pairwise correlation, effective number of bets) as
+    plain data — the same job the Research Lab's Correlations panel runs.
+    """
+    if method not in ("pearson", "spearman"):
+        raise ValueError("method must be 'pearson' or 'spearman'")
+    syms = _clean_symbols(symbols)
+    services = _services()
+    bars = _data.get_bars_many(syms, source=source, days=days)
+    return services.run_correlation_job(
+        syms, bars, method=method, shrinkage=shrinkage, lookback=lookback)
+
+
 def summarize_desk(report: dict) -> str:
     """One-screen text summary of a desk report."""
     n_ideas = sum(len(b["ideas"]) for b in report["briefs"])
@@ -497,3 +521,21 @@ def summarize_sentiment_price(result: dict) -> str:
         f"event CAR={es['mean_car']:+.4f} over {es['n_events']} bursts "
         f"(p={es['pvalue']:.3f})"
     )
+
+
+def summarize_correlation(result: dict) -> str:
+    """One-screen text summary of a correlation/EDA report."""
+    div = result["diversification"]
+    hi = div["max_pairwise_corr"]
+    dirty = [s for s, q in result["quality"].items() if not q["clean"]]
+    lines = [
+        f"Correlation ({result['correlation']['method']}) "
+        f"{len(result['symbols'])} symbols, {result['n_obs']} obs: "
+        f"mean pairwise r={div['mean_pairwise_corr']:+.3f}, "
+        f"max {hi['a']}/{hi['b']}={hi['value']:+.3f}, "
+        f"effective N={div['effective_n_equal_weight']:.1f}, "
+        f"LW delta={result['covariance']['shrinkage_delta']:.3f}",
+    ]
+    if dirty:
+        lines.append(f"  data-quality flags: {', '.join(dirty)}")
+    return "\n".join(lines)

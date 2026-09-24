@@ -245,6 +245,9 @@ def test_parser_research_lab_defaults():
     assert args.symbol == "DEMO"
     args = p.parse_args(["volsurface"])
     assert args.symbol == "SPY" and args.risk_free == 0.03
+    args = p.parse_args(["correlate"])
+    assert args.symbols == "SPY,QQQ,IWM,DIA" and args.method == "pearson" \
+        and args.shrinkage == "ledoit_wolf" and args.lookback == 252
 
 
 def test_cmd_orderbook_runs(capsys):
@@ -257,3 +260,35 @@ def test_cmd_volsurface_runs(capsys):
     pytest.importorskip("trade_volsurface")
     assert cli.main(["volsurface"]) == 0
     assert "SVI fits" in capsys.readouterr().out
+
+
+def test_correlation_missing_engine_errors(monkeypatch):
+    _need_dashboard()
+    _block_engine(monkeypatch, "trade_eda")
+    with pytest.raises(RuntimeError, match="trade-eda"):
+        pipeline.run_correlation(["SPY", "QQQ"])
+
+
+def test_correlation_validates_symbols():
+    with pytest.raises(ValueError):
+        pipeline.run_correlation(["  "])
+    with pytest.raises(ValueError):
+        pipeline.run_correlation(["SPY"], method="bogus")
+
+
+def test_correlation_demo():
+    pytest.importorskip("trade_dashboard_web")
+    pytest.importorskip("trade_eda")
+    result = pipeline.run_correlation(["SPY", "QQQ", "IWM"], days=300,
+                                      lookback=200)
+    assert result["source"] == "trade-eda"
+    assert result["n_obs"] == 199
+    assert len(result["correlation"]["matrix"]) == 3
+    assert "effective N" in pipeline.summarize_correlation(result)
+
+
+def test_cmd_correlate_runs(capsys):
+    pytest.importorskip("trade_eda")
+    assert cli.main(["correlate", "--symbols", "SPY,QQQ", "--days", "200",
+                     "--lookback", "100"]) == 0
+    assert "Correlation" in capsys.readouterr().out

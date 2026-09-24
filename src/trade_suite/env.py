@@ -73,6 +73,10 @@ MODULES: tuple[Module, ...] = (
     Module("trade-sentiment-vs-price", "trade_sentiment_vs_price",
            "Sentiment vs price: lead/lag, event studies, IC, indicators",
            "https://github.com/crieck2010/trade-sentiment-vs-price"),
+    Module("trade-eda", "trade_eda",
+           "Correlation/covariance/EDA: Pearson/Spearman matrices, "
+           "Ledoit-Wolf shrinkage, summary stats, data quality",
+           "https://github.com/crieck2010/trade-eda"),
     Module("trade-dashboard-web", "trade_dashboard_web",
            "Web dashboard (shared engine services)",
            "https://github.com/crieck2010/trade-dashboard-web"),

@@ -207,6 +207,18 @@ def cmd_sentiment_price(args) -> int:
     return 0
 
 
+def cmd_correlation(args) -> int:
+    from . import pipeline
+
+    syms = [s.strip() for s in args.symbols.split(",") if s.strip()]
+    print(f"Running correlation/EDA over {', '.join(syms)} …")
+    result = pipeline.run_correlation(
+        syms, source=args.source, days=args.days, method=args.method,
+        shrinkage=args.shrinkage, lookback=args.lookback)
+    print(pipeline.summarize_correlation(result))
+    return 0
+
+
 def cmd_volsurface(args) -> int:
     from . import pipeline
 
@@ -315,6 +327,16 @@ def build_parser() -> argparse.ArgumentParser:
     vs.add_argument("--spot", type=float, default=None)
     vs.add_argument("--risk-free", type=float, default=0.03)
 
+    co = sub.add_parser("correlate", help="correlation/EDA report (trade-eda)")
+    co.add_argument("--symbols", default="SPY,QQQ,IWM,DIA")
+    co.add_argument("--source", default="demo", choices=["demo", "equities"])
+    co.add_argument("--days", type=int, default=365)
+    co.add_argument("--method", default="pearson",
+                    choices=["pearson", "spearman"])
+    co.add_argument("--shrinkage", default="ledoit_wolf",
+                    choices=["ledoit_wolf", "sample"])
+    co.add_argument("--lookback", type=int, default=252)
+
     return parser
 
 
@@ -334,6 +356,7 @@ def main(argv: list[str] | None = None) -> int:
         "factors": cmd_factors,
         "sentiment-price": cmd_sentiment_price,
         "volsurface": cmd_volsurface,
+        "correlate": cmd_correlation,
         "launch": cmd_launch,
     }
     try:

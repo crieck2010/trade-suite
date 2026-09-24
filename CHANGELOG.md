@@ -4,6 +4,20 @@ All notable changes to `trade-suite` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-09-24
+
+### Added
+- Wired in **trade-eda** as suite module twenty: correlation/covariance/
+  EDA engine (Pearson/Spearman matrices, Ledoit-Wolf shrinkage, per-asset
+  summary stats, data-quality checks, diversification stats). New
+  `pipeline.run_correlation` workflow + `summarize_correlation`, new
+  `trade-suite correlate` CLI command, registry entry in `trade_suite.env`.
+  The workflow delegates to the dashboards' canonical
+  `run_correlation_job`, so CLI, scripted, and Research Lab runs of the
+  same universe agree exactly.
+- Research Lab grows to eight panels in both dashboards (new Correlations
+  panel), following the established 0.2.0 wiring pattern unchanged.
+
 ## [0.2.0] - 2026-09-24
 
 ### Added

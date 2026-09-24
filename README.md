@@ -1,13 +1,13 @@
 # trade-suite
 
 The meta-package for the **trade-suite** algorithmic and agentic trading
-system: one install for all nineteen modules, environment introspection,
+system: one install for all twenty modules, environment introspection,
 end-to-end research workflows, and a unified CLI.
 
 > **Research tooling only.** Backtesting, research, and paper-trading
 > software. It does not trade live and it is not investment advice.
 
-## The nineteen modules
+## The twenty modules
 
 | Module | Role |
 |---|---|
@@ -28,6 +28,7 @@ end-to-end research workflows, and a unified CLI.
 | [trade-volsurface](https://github.com/crieck2010/trade-volsurface) | Volatility surfaces: SVI fits, arbitrage checks, local vol |
 | [trade-factors](https://github.com/crieck2010/trade-factors) | Factor analysis: Fama-French regressions, GRS, risk models |
 | [trade-sentiment-vs-price](https://github.com/crieck2010/trade-sentiment-vs-price) | Sentiment vs price: lead/lag, event studies, IC, indicators |
+| [trade-eda](https://github.com/crieck2010/trade-eda) | Correlation/covariance/EDA: Pearson/Spearman matrices, Ledoit-Wolf shrinkage, summary stats, data quality |
 | [trade-dashboard-web](https://github.com/crieck2010/trade-dashboard-web) | Web dashboard |
 | [trade-dashboard-desktop](https://github.com/crieck2010/trade-dashboard-desktop) | Desktop dashboard (tkinter) |
 | [trade-dashboard-desktop](https://github.com/crieck2010/trade-dashboard-desktop) | Desktop dashboard (tkinter) |
@@ -98,6 +99,9 @@ trade-suite sentiment-price --symbol SPY
 
 # SVI volatility surface fit (demo quotes; real chains via the engine)
 trade-suite volsurface --symbol SPY
+
+# correlation/EDA report: matrix, shrunk covariance, stats, data quality
+trade-suite correlate --symbols SPY,QQQ,IWM,DIA
 
 # launch a dashboard
 trade-suite launch web
