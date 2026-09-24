@@ -5,7 +5,7 @@
 `trade-suite` contains no trading logic of its own. It is the **composition
 root** of the system:
 
-1. **One install** — `pyproject.toml` declares all twelve modules as
+1. **One install** — `pyproject.toml` declares all nineteen modules as
    `git+https` dependencies, so `pip install
    git+https://github.com/crieck2010/trade-suite.git` provisions the whole
    system.
@@ -21,25 +21,77 @@ root** of the system:
 ```
 ┌──────────────────────────────────────────────────────────┐
 │ trade-suite (this repo)                                  │
-│  env.py        registry: 12 modules, roles, repo URLs     │
+│  env.py        registry: 19 modules, roles, repo URLs     │
 │  data.py       get_bars → dashboard DataService           │
 │  pipeline.py   run_desk / run_backtest / evaluate_orders │
 │                research_pipeline (desk→backtest→risk)     │
 │                paper_overview (trade-paper state)         │
 │                sentiment_scan (trade-sentiment pops)      │
+│  research lab  run_pairs_screen / run_orderbook_sim /    │
+│                run_optimize / run_montecarlo /           │
+│                run_factor_analysis / run_vol_surface /   │
+│                run_sentiment_price — one thin workflow   │
+│                per new engine, plain-data in/out         │
 │  cli.py        status | doctor | demo | backtest |        │
-│                paper | sentiment | launch                 │
+│                paper | sentiment | launch |              │
+│                pairs | orderbook | optimize | montecarlo │
+│                factors | sentiment-price | volsurface     │
 ├──────────────────────────────────────────────────────────┤
 │ dashboards (services reused, not reimplemented)           │
 │  trade-dashboard-web.engine  ← preferred service impl     │
 │  trade-dashboard-desktop.engine ← fallback service impl  │
+│  both expose a Research Lab tab over the same engines     │
 ├──────────────────────────────────────────────────────────┤
 │ engines (lazy imports everywhere)                         │
 │  trade-data-* → trade-strategies → trade-backtest        │
 │  trade-risk → trade-agents → trade-paper (paper only)    │
 │  trade-sentiment → trade-agents (sentiment_scout)        │
+│  research lab: trade-pairs, trade-orderbook,             │
+│  trade-optimize, trade-montecarlo, trade-volsurface,     │
+│  trade-factors, trade-sentiment-vs-price                 │
 └──────────────────────────────────────────────────────────┘
 ```
+
+## The research-lab wiring pattern (0.2.0)
+
+The seven quant engines are wired in exactly like `trade-paper` and
+`trade-sentiment` were: the meta-package holds **no logic of its own**.
+Each engine stays the single engine of record; `pipeline.py` adds one thin
+workflow per engine that
+
+1. imports the engine lazily via `env.require(dist)` (a missing engine
+   raises a `RuntimeError` naming the `pip install git+…` fix),
+2. feeds it plain data (dict bars from `data.py`, or the engine's own
+   demo/synthetic generators),
+3. returns plain, JSON-serializable data the dashboards can render
+   without importing the engine themselves.
+
+This keeps three consumers — the `trade-suite` CLI, scripted Python, and
+both dashboards' Research Lab tabs — running the **same** code path, so a
+scripted run and a dashboard run of the same job agree exactly. The
+dashboards mirror the pattern one level down: each dashboard's engine
+service module calls the same workflow functions, and each UI tab only
+renders the plain-data result.
+
+### Scaling notes
+
+- **Engines stay independent.** A workflow never imports two engines
+  except through their public plain-data adapters (e.g. optimize's
+  returns matrix feeding montecarlo is done inline, not by coupling the
+  packages), so any engine can be versioned, replaced, or scaled out
+  (separate process / service) without touching the others.
+- **Workflows are stateless and side-effect free.** No caches, no files,
+  no globals: every call is `(params) → dict`, which makes them trivially
+  parallelizable (thread/process pool over symbols) and safe to expose as
+  HTTP endpoints — which is exactly what the web dashboard does.
+- **Demo data is deterministic.** Seeded synthetic generators mean the
+  full pipeline is testable offline and in CI with no network or keys.
+- **Real data plugs in at the edges.** Delayed equities via
+  `trade-data-equities`, Ken French CSVs via the factors engine's
+  `load_french_csv`, real option chains via the volsurface engine's
+  `from_option_chain`, archived sentiment rows via
+  `run_sentiment_price(..., sentiment_rows=...)` — no workflow signatures
+  change when a real source replaces demo data.
 
 ## Dependency rules
 

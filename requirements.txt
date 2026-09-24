@@ -10,6 +10,13 @@ git+https://github.com/crieck2010/trade-risk.git
 git+https://github.com/crieck2010/trade-agents.git
 git+https://github.com/crieck2010/trade-paper.git
 git+https://github.com/crieck2010/trade-sentiment.git
+git+https://github.com/crieck2010/trade-pairs.git
+git+https://github.com/crieck2010/trade-orderbook.git
+git+https://github.com/crieck2010/trade-optimize.git
+git+https://github.com/crieck2010/trade-montecarlo.git
+git+https://github.com/crieck2010/trade-volsurface.git
+git+https://github.com/crieck2010/trade-factors.git
+git+https://github.com/crieck2010/trade-sentiment-vs-price.git
 git+https://github.com/crieck2010/trade-dashboard-web.git
 git+https://github.com/crieck2010/trade-dashboard-desktop.git
 # optional: real delayed equity data

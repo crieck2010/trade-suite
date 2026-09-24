@@ -1,13 +1,13 @@
 # trade-suite
 
 The meta-package for the **trade-suite** algorithmic and agentic trading
-system: one install for all twelve modules, environment introspection,
+system: one install for all nineteen modules, environment introspection,
 end-to-end research workflows, and a unified CLI.
 
 > **Research tooling only.** Backtesting, research, and paper-trading
 > software. It does not trade live and it is not investment advice.
 
-## The twelve modules
+## The nineteen modules
 
 | Module | Role |
 |---|---|
@@ -21,7 +21,15 @@ end-to-end research workflows, and a unified CLI.
 | [trade-agents](https://github.com/crieck2010/trade-agents) | Agentic research desk (scouts → portfolio manager → risk manager) |
 | [trade-paper](https://github.com/crieck2010/trade-paper) | Paper-trading execution engine (Alpaca paper, 3×-daily runner, approval queue) |
 | [trade-sentiment](https://github.com/crieck2010/trade-sentiment) | Social/news sentiment engine (Reddit, StockTwits, news RSS; feeds the agents' `sentiment_scout`) |
+| [trade-pairs](https://github.com/crieck2010/trade-pairs) | Pairs trading: cointegration screen, hedge ratios, signals |
+| [trade-orderbook](https://github.com/crieck2010/trade-orderbook) | Limit-order-book simulator and execution analytics |
+| [trade-optimize](https://github.com/crieck2010/trade-optimize) | Markowitz portfolio optimization and rebalancing |
+| [trade-montecarlo](https://github.com/crieck2010/trade-montecarlo) | Monte Carlo simulation: VaR/CVaR, drawdowns, scenarios |
+| [trade-volsurface](https://github.com/crieck2010/trade-volsurface) | Volatility surfaces: SVI fits, arbitrage checks, local vol |
+| [trade-factors](https://github.com/crieck2010/trade-factors) | Factor analysis: Fama-French regressions, GRS, risk models |
+| [trade-sentiment-vs-price](https://github.com/crieck2010/trade-sentiment-vs-price) | Sentiment vs price: lead/lag, event studies, IC, indicators |
 | [trade-dashboard-web](https://github.com/crieck2010/trade-dashboard-web) | Web dashboard |
+| [trade-dashboard-desktop](https://github.com/crieck2010/trade-dashboard-desktop) | Desktop dashboard (tkinter) |
 | [trade-dashboard-desktop](https://github.com/crieck2010/trade-dashboard-desktop) | Desktop dashboard (tkinter) |
 
 Design principles across the suite: pure-logic engines with no UI imports,
@@ -69,6 +77,28 @@ trade-suite sentiment --symbols SPY,AAPL,NVDA --window-hours 24
 # paper-trading overview (paper only, never live)
 trade-suite paper --config paper-config.json
 
+# --- research lab: the seven new quant engines, all demo-capable ---
+# screen a universe for cointegrated pairs
+trade-suite pairs --symbols SPY,QQQ,AAPL,MSFT,NVDA --max-pairs 10
+
+# simulate an order against a seeded limit-order book
+trade-suite orderbook --side buy --quantity 120
+
+# optimize a long-only portfolio (max_sharpe | min_variance | risk_parity | equal_weight)
+trade-suite optimize --symbols SPY,AAPL,MSFT --method max_sharpe
+
+# simulated portfolio VaR/CVaR over correlated GBM paths
+trade-suite montecarlo --symbols SPY,AAPL --paths 5000 --steps 252
+
+# Fama-French factor regressions + GRS joint-alpha test
+trade-suite factors --symbols SPY,AAPL --model ff5
+
+# sentiment-vs-price verdict bundle (lead/lag, IC, event study)
+trade-suite sentiment-price --symbol SPY
+
+# SVI volatility surface fit (demo quotes; real chains via the engine)
+trade-suite volsurface --symbol SPY
+
 # launch a dashboard
 trade-suite launch web
 trade-suite launch desktop
@@ -110,6 +140,31 @@ out = pipeline.research_pipeline(["SPY"], backtest_strategy="donchian_breakout")
 # social/news sentiment pops (trade-sentiment engine)
 scan = pipeline.sentiment_scan(["SPY", "NVDA"], window_hours=24)
 print(pipeline.summarize_sentiment(scan))
+
+# --- research lab: one thin workflow per new engine ---
+pairs = pipeline.run_pairs_screen(["SPY", "QQQ", "AAPL", "MSFT", "NVDA"])
+print(pipeline.summarize_pairs(pairs))
+
+sim = pipeline.run_orderbook_sim(side="buy", quantity=120.0)
+print(pipeline.summarize_orderbook(sim))
+
+opt = pipeline.run_optimize(["SPY", "AAPL", "MSFT"], method="max_sharpe")
+print(pipeline.summarize_optimize(opt))
+
+mc = pipeline.run_montecarlo(["SPY", "AAPL"], n_paths=5_000, n_steps=252)
+print(pipeline.summarize_montecarlo(mc))
+
+fac = pipeline.run_factor_analysis(["SPY", "AAPL"], model="ff5")
+print(pipeline.summarize_factors(fac))
+
+svp = pipeline.run_sentiment_price("SPY")
+print(pipeline.summarize_sentiment_price(svp))
+
+vs = pipeline.run_vol_surface(symbol="SPY")
+print(pipeline.summarize_volsurface(vs))
+
+# enrich the desk pipeline with sentiment-vs-price + factor exposures
+out = pipeline.research_pipeline(["SPY"], sentiment_price=True, factor_model="ff5")
 ```
 
 See `examples/end_to_end_demo.py` for a runnable script.

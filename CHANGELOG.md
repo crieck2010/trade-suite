@@ -4,6 +4,39 @@ All notable changes to `trade-suite` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-09-24
+
+### Added
+- Wired in the seven new quant engines as suite modules thirteen through
+  nineteen: **trade-pairs** (cointegration screen, hedge ratios, signals),
+  **trade-orderbook** (limit-order-book simulator, execution analytics),
+  **trade-optimize** (Markowitz optimization, efficient frontier),
+  **trade-montecarlo** (simulated VaR/CVaR, drawdown scenarios),
+  **trade-volsurface** (SVI surface fits, arbitrage checks),
+  **trade-factors** (Fama-French regressions, GRS joint-alpha test), and
+  **trade-sentiment-vs-price** (lead/lag, event studies, information
+  coefficient, sentiment indicators). Git-URL dependencies in
+  `pyproject.toml` / `requirements.txt`, registry entries in
+  `trade_suite.env` (nineteen modules), and one thin workflow per engine
+  in `trade_suite.pipeline` — plain data in, plain data out, demo-capable,
+  each naming its engine of record the way `paper_overview` and
+  `sentiment_scan` already do.
+- Seven matching CLI commands: `trade-suite pairs|orderbook|optimize|
+  montecarlo|factors|sentiment-price|volsurface`, each printing a one-screen
+  summary.
+- `research_pipeline()` gains two opt-in enrichments (off by default):
+  `sentiment_price=True` attaches a per-symbol sentiment-vs-price verdict,
+  and `factor_model="ff5"` attaches a Fama-French factor report.
+- `docs/ARCHITECTURE.md` documents the research-lab wiring pattern; README
+  quickstart and Python API examples cover all seven flows.
+
+### Notes
+- Demo bars cap at 750 days, so demo factor regressions use about two
+  years of monthly history (synthetic factor date labels; alignment is
+  what matters). Real Ken French CSVs plug into the engine's
+  `load_french_csv`; real option chains into `from_option_chain`; real
+  sentiment history into `run_sentiment_price(..., sentiment_rows=...)`.
+
 ## [0.1.2] - 2026-09-23
 
 ### Added

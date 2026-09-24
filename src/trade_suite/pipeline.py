@@ -9,7 +9,10 @@ at ``import trade_suite`` time.
 
 from __future__ import annotations
 
+import math
+
 from . import data as _data
+from . import env as _env
 
 
 def _services():
@@ -72,10 +75,17 @@ def research_pipeline(
     equity: float = 100_000.0,
     backtest_strategy: str | None = None,
     backtest_params: dict | None = None,
+    sentiment_price: bool = False,
+    factor_model: str | None = None,
 ) -> dict:
     """Desk research → optional strategy backtest → risk review of orders.
 
-    Returns ``{"desk": ..., "backtest": ...|None, "risk": ...}`` as plain data.
+    Optional enrichments (off by default, keeping the classic call fast):
+    ``sentiment_price=True`` attaches a per-symbol sentiment-vs-price
+    verdict; ``factor_model="ff5"`` attaches a Fama-French factor report.
+
+    Returns ``{"desk": ..., "backtest": ...|None, "risk": ...}`` plus any
+    requested enrichment keys, all as plain data.
     """
     symbols = [s.strip().upper() for s in symbols if s and s.strip()]
     if not symbols:
@@ -89,7 +99,16 @@ def research_pipeline(
                                 backtest_params, source, days, equity)
 
     risk = evaluate_orders(desk.get("approved_orders", []), None, equity)
-    return {"desk": desk, "backtest": backtest, "risk": risk}
+    out: dict = {"desk": desk, "backtest": backtest, "risk": risk}
+    if sentiment_price:
+        out["sentiment_price"] = {
+            s: run_sentiment_price(s, source=source, days=min(days, 365))
+            for s in symbols
+        }
+    if factor_model:
+        out["factors"] = run_factor_analysis(
+            symbols, source=source, days=max(days, 750), model=factor_model)
+    return out
 
 
 def paper_overview(config_path: str = "paper-config.json") -> dict:
@@ -192,6 +211,351 @@ def summarize_sentiment(scan_result: dict) -> str:
     return "\n".join(lines)
 
 
+# ---------------------------------------------------------------------------
+# Research-lab workflows (trade-suite 0.2.0): one thin workflow per new engine.
+# Each talks to its engine of record directly (like paper_overview and
+# sentiment_scan above), takes plain data in, and returns plain data out —
+# so scripted runs and dashboard runs of the same job agree exactly.
+# ---------------------------------------------------------------------------
+
+def _common_closes(symbols: list[str], source: str,
+                   days: int) -> dict[str, list[float]]:
+    """``{symbol: closes}`` truncated to the common length, oldest-first."""
+    bars = _data.get_bars_many(symbols, source=source, days=days)
+    closes = {s: [float(b["close"]) for b in bs] for s, bs in bars.items()}
+    m = min(len(c) for c in closes.values())
+    return {s: c[-m:] for s, c in closes.items()}
+
+
+def _clean_symbols(symbols: list[str]) -> list[str]:
+    out = [s.strip().upper() for s in symbols if s and s.strip()]
+    if not out:
+        raise ValueError("at least one symbol is required")
+    return out
+
+
+def run_pairs_screen(
+    symbols: list[str],
+    source: str = "demo",
+    days: int = 300,
+    lookback: int = 252,
+    max_pairs: int = 10,
+) -> dict:
+    """Screen a symbol universe for cointegrated pairs (trade-pairs).
+
+    Returns the ranked candidates with hedge ratios, half-lives, and the
+    Engle-Granger verdicts as plain data.
+    """
+    syms = _clean_symbols(symbols)
+    tp = _env.require("trade-pairs")
+    closes = _common_closes(syms, source, days)
+    lb = min(lookback, min(len(c) for c in closes.values()))
+    if lb < 30:
+        raise ValueError(f"need >= 30 bars per symbol, have {lb}")
+    cands = tp.find_pairs(closes, lookback=lb, max_pairs=max_pairs)
+    return {
+        "source": "trade-pairs",
+        "symbols": sorted(closes),
+        "lookback": lb,
+        "n_cointegrated": sum(1 for c in cands if c.cointegrated),
+        "pairs": [c.to_dict() for c in cands],
+    }
+
+
+def run_orderbook_sim(
+    symbol: str = "DEMO",
+    side: str = "buy",
+    quantity: float = 100.0,
+    order_type: str = "market",
+    n_levels: int = 5,
+    level_qty: float = 50.0,
+) -> dict:
+    """Simulate executing an order against a seeded book (trade-orderbook).
+
+    Seeds a symmetric ``n_levels``-deep book around 100.00, fires one probe
+    order, and reports fill quality: average fill price and slippage in bps
+    versus mid, plus microstructure features for agents.
+    """
+    if side not in ("buy", "sell"):
+        raise ValueError("side must be 'buy' or 'sell'")
+    if order_type not in ("market", "limit"):
+        raise ValueError("order_type must be 'market' or 'limit'")
+    tob = _env.require("trade-orderbook")
+    book = tob.OrderBook()
+    mid, tick = 100.0, 0.01
+    oid = 0
+    for lvl in range(1, n_levels + 1):
+        for s, px in (("bid", mid - lvl * tick), ("ask", mid + lvl * tick)):
+            oid += 1
+            book.add(tob.Order(order_id=f"seed-{oid}", side=s,
+                               quantity=level_qty, price=round(px, 4)))
+    probe = tob.Order(
+        order_id="probe", side="bid" if side == "buy" else "ask",
+        quantity=quantity, price=None if order_type == "market" else mid,
+        order_type=order_type)
+    fills = tob.fills_for_paper_order(book, probe)
+    filled = sum(f["quantity"] for f in fills)
+    avg = (sum(f["quantity"] * f["price"] for f in fills) / filled
+           if filled else 0.0)
+    signed = 1.0 if side == "buy" else -1.0
+    return {
+        "source": "trade-orderbook",
+        "symbol": symbol.strip().upper(),
+        "side": side,
+        "quantity": quantity,
+        "order_type": order_type,
+        "midprice": mid,
+        "filled_qty": filled,
+        "fill_ratio": filled / quantity if quantity else 0.0,
+        "avg_fill_price": round(avg, 4),
+        "slippage_bps": round((avg / mid - 1.0) * 10_000 * signed, 2),
+        "n_fills": len(fills),
+        "book_features": tob.to_agent_features(book, levels=n_levels,
+                                               symbol=symbol.strip().upper()),
+    }
+
+
+def run_optimize(
+    symbols: list[str],
+    source: str = "demo",
+    days: int = 250,
+    method: str = "max_sharpe",
+    max_weight: float = 1.0,
+) -> dict:
+    """Optimize a long-only portfolio over ``symbols`` (trade-optimize).
+
+    ``method``: max_sharpe | min_variance | risk_parity | equal_weight.
+    Returns weights, portfolio stats, and a 20-point efficient frontier —
+    the same numbers the dashboard Portfolio panel renders.
+    """
+    syms = _clean_symbols(symbols)
+    topt = _env.require("trade-optimize")
+    syms = sorted(_common_closes(syms, source, days))
+    closes = _common_closes(syms, source, days)
+    flat = [{"symbol": s, "close": c} for s in syms for c in closes[s]]
+    names, R = topt.returns_from_dict_bars(flat, syms)
+    mu = topt.estimates.shrink_mean(R)
+    sigma = topt.estimates.shrink_covariance(R)
+    if method == "max_sharpe":
+        w = topt.max_sharpe(sigma, mu, max_weight=max_weight)
+    elif method == "min_variance":
+        w = topt.min_variance(sigma, max_weight=max_weight)
+    elif method == "risk_parity":
+        w = topt.risk_parity(sigma, max_weight=max_weight)
+    elif method == "equal_weight":
+        w = topt.equal_weight(len(names))
+    else:
+        raise ValueError(f"unknown method {method!r}")
+
+    def stats(w_: list[float]) -> dict:
+        er = sum(x * m for x, m in zip(w_, mu))
+        var = sum(x * sum(s * y for s, y in zip(row, w_))
+                  for x, row in zip(w_, sigma))
+        vol = math.sqrt(max(var, 0.0))
+        return {"expected_return": er, "volatility": vol,
+                "sharpe": er / vol if vol > 0 else 0.0}
+
+    port = stats(w)
+    frontier = [{"expected_return": p["expected_return"],
+                 "volatility": p["volatility"], "sharpe": p["sharpe"]}
+                for p in topt.efficient_frontier(sigma, mu,
+                                                 max_weight=max_weight,
+                                                 n_points=20)]
+    return {
+        "source": "trade-optimize",
+        "symbols": names,
+        "method": method,
+        "weights": {s: round(x, 4) for s, x in zip(names, w)},
+        **{k: round(v, 6) for k, v in port.items()},
+        "frontier": frontier,
+    }
+
+
+def _corr_matrix(returns: list[list[float]]) -> list[list[float]]:
+    """Sample correlation of per-asset return columns (t×n rows in)."""
+    t = len(returns)
+    cols = [list(c) for c in zip(*returns)]
+    means = [sum(c) / t for c in cols]
+    stds = []
+    for i, c in enumerate(cols):
+        var = sum((x - means[i]) ** 2 for x in c) / (t - 1)
+        stds.append(math.sqrt(max(var, 0.0)))
+    n = len(cols)
+    out = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(n):
+            if stds[i] > 0 and stds[j] > 0:
+                cov = sum((returns[k][i] - means[i]) * (returns[k][j] - means[j])
+                          for k in range(t)) / (t - 1)
+                out[i][j] = max(-1.0, min(1.0, cov / (stds[i] * stds[j])))
+            out[i][i] = 1.0
+    return out
+
+
+def run_montecarlo(
+    symbols: list[str],
+    weights: list[float] | None = None,
+    source: str = "demo",
+    days: int = 250,
+    equity: float = 100_000.0,
+    n_paths: int = 5_000,
+    n_steps: int = 252,
+    seed: int = 7,
+    alpha: float = 0.95,
+) -> dict:
+    """Simulated portfolio VaR/CVaR over correlated GBM paths (trade-montecarlo).
+
+    Complements trade-optimize's analytic vol with a full P&L distribution.
+    """
+    syms = _clean_symbols(symbols)
+    tmc = _env.require("trade-montecarlo")
+    syms = sorted(_common_closes(syms, source, days))
+    closes = _common_closes(syms, source, days)
+    R = [[closes[s][i] / closes[s][i - 1] - 1.0 for s in syms]
+         for i in range(1, len(closes[syms[0]]))]
+    t = len(R)
+    mu = [sum(R[k][i] for k in range(t)) / t for i in range(len(syms))]
+    sigma = [math.sqrt(sum((R[k][i] - mu[i]) ** 2 for k in range(t)) / (t - 1))
+             for i in range(len(syms))]
+    corr = _corr_matrix(R)
+    s0 = [closes[s][-1] for s in syms]
+    w = list(weights) if weights else [1.0 / len(syms)] * len(syms)
+    if len(w) != len(syms):
+        raise ValueError("weights length must match symbols")
+    result = tmc.portfolio_var(w, s0, mu, sigma, corr, capital=equity,
+                               n_paths=n_paths, n_steps=n_steps, T=1.0,
+                               seed=seed, alpha=alpha)
+    return {
+        "source": "trade-montecarlo",
+        "symbols": syms,
+        "n_paths": n_paths,
+        "n_steps": n_steps,
+        "seed": seed,
+        "equity": equity,
+        **result,
+    }
+
+
+def run_vol_surface(
+    symbol: str = "SPY",
+    spot: float | None = None,
+    risk_free: float = 0.03,
+) -> dict:
+    """Fit an SVI volatility surface (trade-volsurface).
+
+    Demo mode uses the engine's synthetic quote set; real option chains plug
+    into the same ``from_option_chain`` adapter the engine exposes.
+    """
+    tvs = _env.require("trade-volsurface")
+    try:
+        from trade_volsurface.cli import demo_quotes
+    except ImportError as exc:
+        raise RuntimeError(
+            "trade-volsurface is installed but its demo quotes are not "
+            "importable"
+        ) from exc
+    quotes = demo_quotes()
+    s0 = spot if spot is not None else 100.0
+    # demo quotes are (T, log-moneyness k, iv); convert to strikes like the
+    # engine's own CLI does before handing rows to the public adapter.
+    rows = [{"T": q["T"], "K": s0 * math.exp(risk_free * q["T"] + q["k"]),
+             "iv": q["iv"]} for q in quotes]
+    surface = tvs.from_option_chain(rows, s0=s0, r=risk_free)
+    fits = tvs.fit_svi_surface(surface)
+    agent = tvs.to_agent_surface(surface)
+    return {
+        "source": "trade-volsurface",
+        "symbol": symbol.strip().upper(),
+        "spot": s0,
+        "risk_free": risk_free,
+        "n_quotes": len(quotes),
+        "expiries": sorted({q["T"] for q in quotes}),
+        "svi_fits": {str(k): {p: round(v, 6) for p, v in f.to_dict().items()}
+                     for k, f in fits.items()},
+        "agent_surface": agent,
+    }
+
+
+def _month_end_closes(bars: list[dict]) -> list[tuple[str, float]]:
+    """``[(yyyymm, last_close)]`` from oldest-first dict bars."""
+    out: dict[str, float] = {}
+    for b in bars:
+        out[str(b["timestamp"])[:7].replace("-", "")] = float(b["close"])
+    return sorted(out.items())
+
+
+def run_factor_analysis(
+    symbols: list[str],
+    source: str = "demo",
+    days: int = 1500,
+    model: str = "ff5",
+    n_months: int = 60,
+) -> dict:
+    """Fama-French time-series regressions + GRS test (trade-factors).
+
+    Demo mode regresses monthly asset returns on the engine's synthetic
+    monthly factor set (date labels are synthetic in demo mode; alignment
+    is what matters).  Demo bars cap at 750 days, so demo runs use about
+    two years of monthly history.  Real Ken French CSVs plug in via the
+    engine's ``load_french_csv``.
+    """
+    syms = _clean_symbols(symbols)
+    tf = _env.require("trade-factors")
+    factors = tf.demo_factors(n=120, seed=7)
+    bars = _data.get_bars_many(syms, source=source, days=days)
+    k = n_months
+    monthly: dict[str, list[float]] = {}
+    for s, bs in bars.items():
+        me = _month_end_closes(bs)
+        rets = [me[i][1] / me[i - 1][1] - 1.0 for i in range(1, len(me))]
+        if len(rets) < 24:
+            raise ValueError(f"need >= 24 monthly returns for {s}, "
+                             f"have {len(rets)} (raise --days)")
+        monthly[s] = rets
+    k = min(k, min(len(r) for r in monthly.values()), len(factors.dates))
+    fdata = tf.FactorData(
+        factors.dates[-k:],
+        {name: col[-k:] for name, col in factors.factors.items()})
+    assets = {s: fdata.excess(monthly[s][-k:]) for s in syms}
+    results = tf.panel_regressions(assets, fdata, model=model)
+    grs = tf.grs_test(results, fdata, model=model)
+    report = tf.to_agent_factor_report(results, grs)
+    return {"source": "trade-factors", "model": model, "n_months": k,
+            **report}
+
+
+def run_sentiment_price(
+    symbol: str,
+    source: str = "demo",
+    days: int = 180,
+    sentiment_rows: list[dict] | None = None,
+) -> dict:
+    """Sentiment-vs-price verdict bundle (trade-sentiment-vs-price).
+
+    Demo mode uses synthetic data with a planted 1-day sentiment lead.
+    For real data pass ``sentiment_rows`` (trade-sentiment JSON rows —
+    the engine is snapshot-based, so history comes from your archive) and
+    set ``source`` to a real bar source.
+    """
+    symbol = symbol.strip().upper()
+    if not symbol:
+        raise ValueError("a symbol is required")
+    tsvp = _env.require("trade-sentiment-vs-price")
+    if sentiment_rows is not None:
+        bars = _data.get_bars(symbol, source=source, days=days)
+        sent = tsvp.from_sentiment_scan(sentiment_rows)
+        prices = tsvp.prices_from_dict_bars(
+            [{"date": str(b["timestamp"])[:10], "close": b["close"]}
+             for b in bars])
+    elif source == "demo":
+        sent, prices = tsvp.demo_data(n_days=days, symbol=symbol)
+    else:
+        raise ValueError(
+            "run_sentiment_price needs sentiment_rows for non-demo sources "
+            "(trade-sentiment is snapshot-based); use source='demo' or pass rows")
+    return tsvp.to_agent_report(symbol, sent, prices)
+
+
 def summarize_desk(report: dict) -> str:
     """One-screen text summary of a desk report."""
     n_ideas = sum(len(b["ideas"]) for b in report["briefs"])
@@ -225,4 +589,90 @@ def summarize_backtest(result: dict) -> str:
         f"Sharpe {m.get('sharpe_ratio', 0):.2f}, "
         f"max DD {m.get('max_drawdown', 0):.1%}, "
         f"{len(result['trades'])} trades)"
+    )
+
+
+def summarize_pairs(result: dict) -> str:
+    """One-screen text summary of a pairs screen."""
+    lines = [f"Pairs screen ({result['lookback']}d lookback): "
+             f"{len(result['pairs'])} candidates, "
+             f"{result['n_cointegrated']} cointegrated"]
+    for p in result["pairs"][:8]:
+        mark = "COINT" if p["cointegrated"] else "     "
+        lines.append(f"  {mark} {p['symbol_a']}/{p['symbol_b']} "
+                     f"hedge={p['hedge_ratio']:.3f} "
+                     f"half-life={p['half_life_bars']:.1f}d "
+                     f"corr={p['correlation']:.2f}")
+    return "\n".join(lines)
+
+
+def summarize_orderbook(result: dict) -> str:
+    """One-screen text summary of an order-book simulation."""
+    return (
+        f"Order book {result['symbol']} {result['side']} "
+        f"{result['quantity']:g} ({result['order_type']}): "
+        f"filled {result['filled_qty']:g} @ avg {result['avg_fill_price']:.2f} "
+        f"vs mid {result['midprice']:.2f} → "
+        f"slippage {result['slippage_bps']:+.1f} bps "
+        f"({result['n_fills']} fills)"
+    )
+
+
+def summarize_optimize(result: dict) -> str:
+    """One-screen text summary of a portfolio optimization."""
+    lines = [f"Optimize ({result['method']}) on {', '.join(result['symbols'])}: "
+             f"E[r]={result['expected_return']:.4f} "
+             f"vol={result['volatility']:.4f} "
+             f"Sharpe={result['sharpe']:.2f}"]
+    top = sorted(result["weights"].items(), key=lambda kv: -kv[1])[:6]
+    lines.append("  weights: " + ", ".join(f"{s}={w:.2%}" for s, w in top))
+    return "\n".join(lines)
+
+
+def summarize_montecarlo(result: dict) -> str:
+    """One-screen text summary of a Monte Carlo VaR run."""
+    return (
+        f"Monte Carlo ({result['n_paths']:,} paths × {result['n_steps']} steps) "
+        f"on {', '.join(result['symbols'])}: "
+        f"VaR({result['alpha']:.0%})=${result['var']:,.0f} "
+        f"({result['var_pct_of_capital']:.1%} of capital) · "
+        f"CVaR=${result['cvar']:,.0f} · "
+        f"P(profit)={result['prob_profit']:.1%}"
+    )
+
+
+def summarize_volsurface(result: dict) -> str:
+    """One-screen text summary of a vol-surface fit."""
+    return (
+        f"Vol surface {result['symbol']} @ {result['spot']:.2f}: "
+        f"{result['n_quotes']} quotes across {len(result['expiries'])} expiries, "
+        f"SVI fits: {', '.join(result['svi_fits'])}"
+    )
+
+
+def summarize_factors(result: dict) -> str:
+    """One-screen text summary of a factor analysis."""
+    lines = [f"Factor analysis ({result['model']}, {result['n_months']} months):"]
+    for a, r in result["assets"].items():
+        lines.append(f"  {a}: alpha={r['alpha']:+.4f} "
+                     f"(t={r['alpha_t']:+.2f}, p={r['alpha_p']:.3f}) "
+                     f"R²={r['rsquared']:.3f}")
+    grs = result.get("grs") or {}
+    if grs:
+        lines.append(f"  GRS joint-alpha: F={grs.get('F', 0):.2f}, "
+                     f"p={grs.get('pvalue', 1):.4f}")
+    return "\n".join(lines)
+
+
+def summarize_sentiment_price(result: dict) -> str:
+    """One-screen text summary of a sentiment-vs-price report."""
+    ll, ic = result["lead_lag"], result["ic"]
+    es = result["event_study"]
+    return (
+        f"Sentiment vs price {result['symbol']} ({result['n_days']}d): "
+        f"{ll['verdict']} (lag {ll['best_lag']}, r={ll['best_r']:+.3f}, "
+        f"p={ll['best_pvalue']:.3f}) · "
+        f"IC={ic['ic']:+.3f} (p={ic['pvalue']:.3f}) · "
+        f"event CAR={es['mean_car']:+.4f} over {es['n_events']} bursts "
+        f"(p={es['pvalue']:.3f})"
     )

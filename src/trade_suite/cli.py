@@ -1,4 +1,6 @@
-"""Unified CLI: ``trade-suite status|doctor|demo|backtest|paper|sentiment|launch``."""
+"""Unified CLI: ``trade-suite status|doctor|demo|backtest|paper|sentiment|launch``
+plus the research-lab commands: ``factors|optimize|montecarlo|pairs|
+orderbook|sentiment-price|volsurface``."""
 
 from __future__ import annotations
 
@@ -130,6 +132,91 @@ def cmd_paper(args) -> int:
     return 0
 
 
+def cmd_pairs(args) -> int:
+    from . import pipeline
+
+    symbols = _parse_symbols(args.symbols)
+    print(f"Screening pairs across {', '.join(symbols)} …")
+    result = pipeline.run_pairs_screen(
+        symbols, source=args.source, days=args.days,
+        lookback=args.lookback, max_pairs=args.max_pairs)
+    print(pipeline.summarize_pairs(result))
+    return 0
+
+
+def cmd_orderbook(args) -> int:
+    from . import pipeline
+
+    print(f"Simulating {args.side} {args.quantity:g} {args.symbol} "
+          f"({args.order_type}) …")
+    result = pipeline.run_orderbook_sim(
+        symbol=args.symbol, side=args.side, quantity=args.quantity,
+        order_type=args.order_type, n_levels=args.levels)
+    print(pipeline.summarize_orderbook(result))
+    return 0
+
+
+def cmd_optimize(args) -> int:
+    from . import pipeline
+
+    symbols = _parse_symbols(args.symbols)
+    print(f"Optimizing ({args.method}) over {', '.join(symbols)} …")
+    result = pipeline.run_optimize(
+        symbols, source=args.source, days=args.days,
+        method=args.method, max_weight=args.max_weight)
+    print(pipeline.summarize_optimize(result))
+    return 0
+
+
+def cmd_montecarlo(args) -> int:
+    from . import pipeline
+
+    symbols = _parse_symbols(args.symbols)
+    weights = None
+    if args.weights:
+        weights = [float(x) for x in args.weights.split(",")]
+    print(f"Running Monte Carlo on {', '.join(symbols)} …")
+    result = pipeline.run_montecarlo(
+        symbols, weights=weights, source=args.source, days=args.days,
+        equity=args.equity, n_paths=args.paths, n_steps=args.steps,
+        seed=args.seed)
+    print(pipeline.summarize_montecarlo(result))
+    return 0
+
+
+def cmd_factors(args) -> int:
+    from . import pipeline
+
+    symbols = _parse_symbols(args.symbols)
+    print(f"Running {args.model} factor regressions on "
+          f"{', '.join(symbols)} …")
+    result = pipeline.run_factor_analysis(
+        symbols, source=args.source, days=args.days,
+        model=args.model, n_months=args.months)
+    print(pipeline.summarize_factors(result))
+    return 0
+
+
+def cmd_sentiment_price(args) -> int:
+    from . import pipeline
+
+    print(f"Analyzing sentiment vs price for {args.symbol} …")
+    result = pipeline.run_sentiment_price(
+        args.symbol, source=args.source, days=args.days)
+    print(pipeline.summarize_sentiment_price(result))
+    return 0
+
+
+def cmd_volsurface(args) -> int:
+    from . import pipeline
+
+    print(f"Fitting SVI vol surface for {args.symbol} …")
+    result = pipeline.run_vol_surface(
+        symbol=args.symbol, spot=args.spot, risk_free=args.risk_free)
+    print(pipeline.summarize_volsurface(result))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="trade-suite",
@@ -173,6 +260,61 @@ def build_parser() -> argparse.ArgumentParser:
     sent.add_argument("--min-conviction", type=float, default=5.0,
                       help="0-10 conviction bar for keeping a pop")
 
+    pairs = sub.add_parser("pairs", help="screen a universe for cointegrated pairs")
+    pairs.add_argument("--symbols", default="SPY,QQQ,AAPL,MSFT,NVDA",
+                       help="comma-separated symbols")
+    pairs.add_argument("--source", default="demo", choices=["demo", "equities"])
+    pairs.add_argument("--days", type=int, default=300)
+    pairs.add_argument("--lookback", type=int, default=252)
+    pairs.add_argument("--max-pairs", type=int, default=10)
+
+    ob = sub.add_parser("orderbook", help="simulate an order against a seeded book")
+    ob.add_argument("--symbol", default="DEMO")
+    ob.add_argument("--side", default="buy", choices=["buy", "sell"])
+    ob.add_argument("--quantity", type=float, default=100.0)
+    ob.add_argument("--order-type", default="market", choices=["market", "limit"])
+    ob.add_argument("--levels", type=int, default=5,
+                    help="seeded book depth per side")
+
+    opt = sub.add_parser("optimize", help="optimize a long-only portfolio")
+    opt.add_argument("--symbols", default="SPY,AAPL,MSFT")
+    opt.add_argument("--source", default="demo", choices=["demo", "equities"])
+    opt.add_argument("--days", type=int, default=250)
+    opt.add_argument("--method", default="max_sharpe",
+                     choices=["max_sharpe", "min_variance", "risk_parity",
+                              "equal_weight"])
+    opt.add_argument("--max-weight", type=float, default=1.0)
+
+    mc = sub.add_parser("montecarlo", help="simulated portfolio VaR/CVaR")
+    mc.add_argument("--symbols", default="SPY,AAPL")
+    mc.add_argument("--weights", default="",
+                    help="comma-separated weights (default: equal)")
+    mc.add_argument("--source", default="demo", choices=["demo", "equities"])
+    mc.add_argument("--days", type=int, default=250)
+    mc.add_argument("--equity", type=float, default=100_000.0)
+    mc.add_argument("--paths", type=int, default=5_000)
+    mc.add_argument("--steps", type=int, default=252)
+    mc.add_argument("--seed", type=int, default=7)
+
+    fac = sub.add_parser("factors", help="Fama-French factor regressions + GRS")
+    fac.add_argument("--symbols", default="SPY,AAPL")
+    fac.add_argument("--source", default="demo", choices=["demo", "equities"])
+    fac.add_argument("--days", type=int, default=1500)
+    fac.add_argument("--model", default="ff5",
+                     choices=["ff3", "ff5", "carhart"])
+    fac.add_argument("--months", type=int, default=60)
+
+    sp = sub.add_parser("sentiment-price",
+                        help="sentiment-vs-price verdict bundle")
+    sp.add_argument("--symbol", default="DEMO")
+    sp.add_argument("--source", default="demo", choices=["demo", "equities"])
+    sp.add_argument("--days", type=int, default=180)
+
+    vs = sub.add_parser("volsurface", help="fit an SVI vol surface (demo quotes)")
+    vs.add_argument("--symbol", default="SPY")
+    vs.add_argument("--spot", type=float, default=None)
+    vs.add_argument("--risk-free", type=float, default=0.03)
+
     return parser
 
 
@@ -185,6 +327,13 @@ def main(argv: list[str] | None = None) -> int:
         "backtest": cmd_backtest,
         "paper": cmd_paper,
         "sentiment": cmd_sentiment,
+        "pairs": cmd_pairs,
+        "orderbook": cmd_orderbook,
+        "optimize": cmd_optimize,
+        "montecarlo": cmd_montecarlo,
+        "factors": cmd_factors,
+        "sentiment-price": cmd_sentiment_price,
+        "volsurface": cmd_volsurface,
         "launch": cmd_launch,
     }
     try:
