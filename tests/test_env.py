@@ -7,8 +7,8 @@ import pytest
 from trade_suite import env
 
 
-def test_registry_covers_nineteen_modules():
-    assert len(env.MODULES) == 20
+def test_registry_covers_twenty_three_modules():
+    assert len(env.MODULES) == 23
     dists = [m.dist for m in env.MODULES]
     assert dists == sorted(dists) or True  # order is pipeline order, not alpha
     assert "trade-backtest" in dists and "trade-agents" in dists
@@ -21,6 +21,10 @@ def test_registry_covers_nineteen_modules():
     assert "trade-volsurface" in dists
     assert "trade-factors" in dists
     assert "trade-sentiment-vs-price" in dists
+    assert "trade-eda" in dists
+    assert "trade-breadth" in dists
+    assert "trade-macro" in dists
+    assert "trade-stream" in dists
     assert "trade-dashboard-web" in dists and "trade-dashboard-desktop" in dists
 
 
@@ -34,7 +38,7 @@ def test_registry_fields():
 
 def test_module_status_shape():
     rows = env.module_status()
-    assert len(rows) == 20
+    assert len(rows) == 23
     for row in rows:
         assert {"dist", "package", "role", "repo", "installed", "version"} <= set(row)
         assert isinstance(row["installed"], bool)

@@ -523,6 +523,147 @@ def summarize_sentiment_price(result: dict) -> str:
     )
 
 
+# ---------------------------------------------------------------------------
+# Market-context, streaming, and reconcile workflows (trade-suite 0.4.0):
+# the same delegation pattern as the research-lab workflows above — each
+# calls _services() (web engine first, desktop fallback) and invokes the
+# canonical run_*_job the dashboards' new panels run, so scripted, CLI,
+# and dashboard runs of the same job agree exactly.  All sibling imports
+# stay lazy: a missing dashboard raises the standard RuntimeError.
+# ---------------------------------------------------------------------------
+
+def run_breadth(
+    preset: str = "standard",
+    seed: int = 7,
+    n_days: int = 600,
+) -> dict:
+    """Market-breadth regime snapshot (trade-breadth).
+
+    Delegates to the dashboards' canonical ``run_breadth_job``.  Returns
+    the source, seed, n_days, n_symbols, and the engine's ``snapshot`` dict
+    (regime, fragility, indicators, thrusts_recent) as plain data.
+    """
+    services = _services()
+    return services.run_breadth_job(preset=preset, seed=seed, n_days=n_days)
+
+
+def run_macro(
+    preset: str = "standard",
+    seed: int = 42,
+    days: int = 600,
+) -> dict:
+    """Macro regime snapshot (trade-macro).
+
+    Copper:gold ratio as the market's growth-expectations proxy, with
+    transition alerts on fast z-score moves.  Delegates to the dashboards'
+    canonical ``run_macro_job``; returns source, seed, days, and the
+    engine's ``snapshot`` dict (regime, z_score, ratio, transition_alert).
+    """
+    services = _services()
+    return services.run_macro_job(preset=preset, seed=seed, days=days)
+
+
+def run_stream_demo(
+    symbols: tuple[str, ...] = ("AAA", "BBB", "CCC"),
+    seed: int = 7,
+    n_ticks: int = 600,
+) -> dict:
+    """Demo tick-stream run (trade-stream): feed -> bus -> alerts + bars.
+
+    Delegates to the dashboards' canonical ``run_stream_demo_job``; the
+    result is JSON-serializable demo output (ticks, spike alerts, resampled
+    bars, latest-price cache) with no network and no credentials.
+    """
+    services = _services()
+    return services.run_stream_demo_job(symbols=list(symbols), seed=seed,
+                                        n_ticks=n_ticks)
+
+
+def run_reconcile_demo() -> dict:
+    """DEMO — read-only reconcile of the paper ledger against a mock broker.
+
+    Exercises trade-paper v0.2.0's reconcile machinery (the same read-only
+    diff the Robinhood MCP adapter uses) against an in-memory mock broker,
+    so this can never touch live state.  Returns ``{"demo": True,
+    "paper_positions": {...}, "broker_positions": {...}, "reconcile":
+    {matched, missing_from_broker, missing_from_ledger, quantity_mismatches,
+    clean}}`` as plain data.
+    """
+    services = _services()
+    return services.run_reconcile_demo_job()
+
+
+def summarize_breadth(result: dict) -> str:
+    """One-screen text summary of a market-breadth snapshot."""
+    snap = result["snapshot"]
+    lines = [
+        f"Market breadth ({result['n_symbols']} symbols x {result['n_days']}d, "
+        f"seed {result['seed']}): regime {snap['regime']} "
+        f"(score {snap.get('regime_score', 0.0):.2f}), "
+        f"fragility {snap['fragility']:.2f}",
+    ]
+    thrusts = snap.get("thrusts_recent") or []
+    if thrusts:
+        lines.append("  recent thrusts: " + ", ".join(
+            f"{t.get('date', '?')} {t.get('kind', t.get('type', 'thrust'))}"
+            for t in thrusts[-3:]))
+    warnings = snap.get("warnings") or []
+    if warnings:
+        lines.append(f"  narrowing warnings active: {len(warnings)}")
+    return "\n".join(lines)
+
+
+def summarize_macro(result: dict) -> str:
+    """One-screen text summary of a macro regime snapshot."""
+    snap = result["snapshot"]
+    ratio, z = snap.get("ratio"), snap.get("z_score")
+    alert = " - TRANSITION ALERT" if snap.get("transition_alert") else ""
+    return (
+        f"Macro regime ({result['days']}d, seed {result['seed']}): "
+        f"{snap['regime']}"
+        + (f" - copper:gold {ratio:.4f}" if ratio is not None else "")
+        + (f" (z {z:+.2f})" if z is not None else "")
+        + alert
+    )
+
+
+def summarize_stream_demo(result: dict) -> str:
+    """One-screen text summary of a demo tick-stream run."""
+    lines = [
+        f"Demo tick stream ({', '.join(result.get('symbols', []))}): "
+        f"{result.get('n_ticks', 0)} ticks -> "
+        f"{result.get('n_alerts', 0)} spike alerts, "
+        f"{result.get('n_bars', 0)} bars",
+    ]
+    for a in (result.get("alerts") or [])[:5]:
+        lines.append(f"  {a.get('symbol')} spike {a.get('move_pct', 0):+.1%} "
+                     f"@ {a.get('price')}")
+    return "\n".join(lines)
+
+
+def summarize_reconcile(result: dict) -> str:
+    """One-screen text summary of a demo reconcile."""
+    rec = result["reconcile"]
+    if rec["clean"]:
+        lines = ["DEMO reconcile (paper ledger vs mock broker): "
+                 "CLEAN - no drift"]
+    else:
+        lines = [f"DEMO reconcile (paper ledger vs mock broker): DRIFT - "
+                 f"{len(rec['missing_from_broker'])} missing from broker, "
+                 f"{len(rec['missing_from_ledger'])} missing from ledger, "
+                 f"{len(rec['quantity_mismatches'])} quantity mismatches"]
+    for m in rec.get("quantity_mismatches", [])[:5]:
+        lines.append(f"  {m['symbol']}: paper {m['paper']:g} vs "
+                     f"broker {m['broker']:g} (diff {m['diff']:+g})")
+    for m in rec.get("missing_from_broker", [])[:5]:
+        lines.append(f"  {m['symbol']}: in paper ({m['paper']:g}), "
+                     "absent at broker")
+    for m in rec.get("missing_from_ledger", [])[:5]:
+        lines.append(f"  {m['symbol']}: at broker ({m['broker']:g}), "
+                     "unknown to paper")
+    return "\n".join(lines)
+
+
 def summarize_correlation(result: dict) -> str:
     """One-screen text summary of a correlation/EDA report."""
     div = result["diversification"]

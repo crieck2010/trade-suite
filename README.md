@@ -1,13 +1,13 @@
 # trade-suite
 
 The meta-package for the **trade-suite** algorithmic and agentic trading
-system: one install for all twenty modules, environment introspection,
+system: one install for all twenty-three modules, environment introspection,
 end-to-end research workflows, and a unified CLI.
 
 > **Research tooling only.** Backtesting, research, and paper-trading
 > software. It does not trade live and it is not investment advice.
 
-## The twenty modules
+## The twenty-three modules
 
 | Module | Role |
 |---|---|
@@ -29,8 +29,10 @@ end-to-end research workflows, and a unified CLI.
 | [trade-factors](https://github.com/crieck2010/trade-factors) | Factor analysis: Fama-French regressions, GRS, risk models |
 | [trade-sentiment-vs-price](https://github.com/crieck2010/trade-sentiment-vs-price) | Sentiment vs price: lead/lag, event studies, IC, indicators |
 | [trade-eda](https://github.com/crieck2010/trade-eda) | Correlation/covariance/EDA: Pearson/Spearman matrices, Ledoit-Wolf shrinkage, summary stats, data quality |
+| [trade-breadth](https://github.com/crieck2010/trade-breadth) | Market breadth: advance/decline, thrusts, regime, fragility |
+| [trade-macro](https://github.com/crieck2010/trade-macro) | Macro regime: copper:gold growth-expectations proxy, transition alerts |
+| [trade-stream](https://github.com/crieck2010/trade-stream) | Real-time streaming: WebSocket transport, pub/sub bus, tick recording and replay |
 | [trade-dashboard-web](https://github.com/crieck2010/trade-dashboard-web) | Web dashboard |
-| [trade-dashboard-desktop](https://github.com/crieck2010/trade-dashboard-desktop) | Desktop dashboard (tkinter) |
 | [trade-dashboard-desktop](https://github.com/crieck2010/trade-dashboard-desktop) | Desktop dashboard (tkinter) |
 
 Design principles across the suite: pure-logic engines with no UI imports,
@@ -103,6 +105,19 @@ trade-suite volsurface --symbol SPY
 # correlation/EDA report: matrix, shrunk covariance, stats, data quality
 trade-suite correlate --symbols SPY,QQQ,IWM,DIA
 
+# market-breadth regime snapshot (trade-breadth)
+trade-suite breadth --days 600
+
+# macro regime snapshot: copper:gold growth-expectations proxy (trade-macro)
+trade-suite macro --days 600
+
+# demo tick stream: feed -> bus -> spike alerts + bars (trade-stream, no network)
+trade-suite stream --symbols AAA,BBB,CCC --ticks 600
+
+# DEMO: read-only reconcile of the paper ledger vs a mock broker
+# (trade-paper v0.2.0 machinery; can never touch live state)
+trade-suite reconcile
+
 # launch a dashboard
 trade-suite launch web
 trade-suite launch desktop
@@ -167,6 +182,24 @@ print(pipeline.summarize_sentiment_price(svp))
 vs = pipeline.run_vol_surface(symbol="SPY")
 print(pipeline.summarize_volsurface(vs))
 
+corr = pipeline.run_correlation(["SPY", "QQQ", "IWM"])
+print(pipeline.summarize_correlation(corr))
+
+# --- market context: breadth, macro, streaming (0.4.0) ---
+br = pipeline.run_breadth(preset="standard", seed=7, n_days=600)
+print(pipeline.summarize_breadth(br))
+
+ma = pipeline.run_macro(preset="standard", seed=42, days=600)
+print(pipeline.summarize_macro(ma))
+
+st = pipeline.run_stream_demo(symbols=("AAA", "BBB", "CCC"), seed=7,
+                              n_ticks=600)
+print(pipeline.summarize_stream_demo(st))
+
+# DEMO only: read-only reconcile of the paper ledger vs a mock broker
+rec = pipeline.run_reconcile_demo()
+print(pipeline.summarize_reconcile(rec))
+
 # enrich the desk pipeline with sentiment-vs-price + factor exposures
 out = pipeline.research_pipeline(["SPY"], sentiment_price=True, factor_model="ff5")
 ```
@@ -187,7 +220,7 @@ trade-suite/
 │   ├── licensing.py               # license-key check hook
 │   └── updates.py                 # GitHub-releases update-check hook
 ├── examples/end_to_end_demo.py
-├── tests/                         # 28 tests
+├── tests/                         # 91 tests (full-env; skip-not-fail bare)
 ├── docs/ARCHITECTURE.md
 ├── requirements.txt               # one-line-per-module install
 ├── CHANGELOG.md / LICENSE (MIT)

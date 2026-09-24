@@ -1,6 +1,7 @@
 """Unified CLI: ``trade-suite status|doctor|demo|backtest|paper|sentiment|launch``
 plus the research-lab commands: ``factors|optimize|montecarlo|pairs|
-orderbook|sentiment-price|volsurface``."""
+orderbook|sentiment-price|volsurface`` and the 0.4.0 market-context
+commands: ``breadth|macro|stream|reconcile``."""
 
 from __future__ import annotations
 
@@ -219,6 +220,47 @@ def cmd_correlation(args) -> int:
     return 0
 
 
+def cmd_breadth(args) -> int:
+    from . import pipeline
+
+    print(f"Running market-breadth snapshot (preset={args.preset}) …")
+    result = pipeline.run_breadth(preset=args.preset, seed=args.seed,
+                                  n_days=args.days)
+    print(pipeline.summarize_breadth(result))
+    return 0
+
+
+def cmd_macro(args) -> int:
+    from . import pipeline
+
+    print(f"Running macro regime snapshot (preset={args.preset}) …")
+    result = pipeline.run_macro(preset=args.preset, seed=args.seed,
+                                days=args.days)
+    print(pipeline.summarize_macro(result))
+    return 0
+
+
+def cmd_stream(args) -> int:
+    from . import pipeline
+
+    symbols = _parse_symbols(args.symbols)
+    print(f"Running demo tick stream: {', '.join(symbols)} "
+          f"({args.ticks} ticks) …")
+    result = pipeline.run_stream_demo(symbols=tuple(symbols), seed=args.seed,
+                                      n_ticks=args.ticks)
+    print(pipeline.summarize_stream_demo(result))
+    return 0
+
+
+def cmd_reconcile(args) -> int:
+    from . import pipeline
+
+    print("DEMO — read-only reconcile against a mock broker")
+    result = pipeline.run_reconcile_demo()
+    print(pipeline.summarize_reconcile(result))
+    return 0
+
+
 def cmd_volsurface(args) -> int:
     from . import pipeline
 
@@ -337,6 +379,27 @@ def build_parser() -> argparse.ArgumentParser:
                     choices=["ledoit_wolf", "sample"])
     co.add_argument("--lookback", type=int, default=252)
 
+    br = sub.add_parser("breadth",
+                        help="market-breadth regime snapshot (trade-breadth)")
+    br.add_argument("--preset", default="standard")
+    br.add_argument("--seed", type=int, default=7)
+    br.add_argument("--days", type=int, default=600)
+
+    ma = sub.add_parser("macro", help="macro regime snapshot (trade-macro)")
+    ma.add_argument("--preset", default="standard")
+    ma.add_argument("--seed", type=int, default=42)
+    ma.add_argument("--days", type=int, default=600)
+
+    st = sub.add_parser("stream", help="demo tick stream (trade-stream)")
+    st.add_argument("--symbols", default="AAA,BBB,CCC",
+                    help="comma-separated symbols")
+    st.add_argument("--seed", type=int, default=7)
+    st.add_argument("--ticks", type=int, default=600)
+
+    sub.add_parser("reconcile",
+                   help="DEMO: reconcile the paper ledger against a mock "
+                        "broker (trade-paper v0.2.0 machinery, read-only)")
+
     return parser
 
 
@@ -357,6 +420,10 @@ def main(argv: list[str] | None = None) -> int:
         "sentiment-price": cmd_sentiment_price,
         "volsurface": cmd_volsurface,
         "correlate": cmd_correlation,
+        "breadth": cmd_breadth,
+        "macro": cmd_macro,
+        "stream": cmd_stream,
+        "reconcile": cmd_reconcile,
         "launch": cmd_launch,
     }
     try:

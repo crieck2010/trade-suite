@@ -4,6 +4,54 @@ All notable changes to `trade-suite` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-09-24
+
+### Added
+- Wired in **trade-breadth** (v0.1.0) as suite module twenty-one: market
+  breadth engine (advance/decline, % above moving averages, new
+  highs/lows, McClellan oscillator, breadth thrusts, broadening/narrowing
+  regime, fragility gauge). New `pipeline.run_breadth` workflow +
+  `summarize_breadth`, new `trade-suite breadth --preset --seed --days`
+  CLI command, registry entry in `trade_suite.env`.
+- Wired in **trade-macro** (v0.1.0) as suite module twenty-two: macro
+  regime engine (EXPANSION / CONTRACTION / NEUTRAL from the copper:gold
+  growth-expectations proxy, transition alerts on fast z-score moves).
+  New `pipeline.run_macro` workflow + `summarize_macro`, new
+  `trade-suite macro --preset --seed --days` CLI command, registry entry
+  in `trade_suite.env`.
+- Wired in **trade-stream** (v0.1.0) as suite module twenty-three:
+  real-time streaming engine (WebSocket transport, pub/sub bus, message
+  normalization, tick recording/replay, tick-to-bar resampling, spike
+  alerts). New `pipeline.run_stream_demo` workflow +
+  `summarize_stream_demo`, new `trade-suite stream --symbols --seed
+  --ticks` CLI command (demo tick feed, no network), registry entry in
+  `trade_suite.env`.
+- New `pipeline.run_reconcile_demo` workflow + `summarize_reconcile` and
+  `trade-suite reconcile` CLI command: a DEMO read-only reconcile of the
+  paper ledger against an in-memory mock broker, exercising trade-paper
+  v0.2.0's reconcile machinery (the same read-only diff the Robinhood
+  MCP adapter uses). Printed output is labeled
+  "DEMO — read-only reconcile against a mock broker"; it can never touch
+  live state.
+- All four flows delegate to the dashboards' canonical
+  `run_breadth_job` / `run_macro_job` / `run_stream_demo_job` /
+  `run_reconcile_demo_job` via `pipeline._services()` (web engine first,
+  desktop fallback), following the established 0.2.0/0.3.0 wiring pattern:
+  scripted, CLI, and dashboard runs of the same job agree exactly.
+
+### Fixed
+- **trade-eda** (wired in 0.3.0) was missing its git-URL dependency line in
+  `pyproject.toml` and `requirements.txt`; added, alongside the three new
+  modules.
+
+### Notes
+- trade-data-equities v0.2.0 added a PolygonProvider, but that is
+  **data-layer only** — no suite code change was needed; the suite keeps
+  talking to the engines through the unchanged `DataService`/`get_bars`
+  paths.
+- Registry is now twenty-three modules; `trade-suite status` derives its
+  counts from `trade_suite.env` unchanged.
+
 ## [0.3.0] - 2026-09-24
 
 ### Added

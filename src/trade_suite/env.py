@@ -77,6 +77,17 @@ MODULES: tuple[Module, ...] = (
            "Correlation/covariance/EDA: Pearson/Spearman matrices, "
            "Ledoit-Wolf shrinkage, summary stats, data quality",
            "https://github.com/crieck2010/trade-eda"),
+    Module("trade-breadth", "trade_breadth",
+           "Market breadth: advance/decline, thrusts, regime, fragility",
+           "https://github.com/crieck2010/trade-breadth"),
+    Module("trade-macro", "trade_macro",
+           "Macro regime: copper:gold growth-expectations proxy, "
+           "transition alerts",
+           "https://github.com/crieck2010/trade-macro"),
+    Module("trade-stream", "trade_stream",
+           "Real-time streaming: WebSocket transport, pub/sub bus, "
+           "tick recording and replay",
+           "https://github.com/crieck2010/trade-stream"),
     Module("trade-dashboard-web", "trade_dashboard_web",
            "Web dashboard (shared engine services)",
            "https://github.com/crieck2010/trade-dashboard-web"),
