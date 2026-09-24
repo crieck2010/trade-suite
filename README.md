@@ -250,6 +250,57 @@ PYTHONPATH=src:../trade-dashboard-web/src:../trade-dashboard-desktop/src:\
 38 tests. Sibling-dependent tests use `pytest.importorskip`, so the suite
 also runs (partially skipped) against a bare install.
 
+## The maths
+
+**What you learn.** How numbers flow across the whole system: the desk
+scores ideas, the portfolio manager weights them, the risk manager vetoes,
+the backtester prices the survivors, and the research enrichments
+(sentiment, factors) attach their verdicts — all as plain data through one
+pipeline call.
+
+**Why it matters.** The meta-package's value is composability, and
+composability is a quantitative claim: a scripted workflow, the web
+dashboard, and the desktop dashboard must produce *identical* results for
+identical inputs. That holds because `pipeline` and `data` delegate to one
+shared dashboard-engine service layer instead of reimplementing the maths
+three times.
+
+**The maths.**
+
+- *Research pipeline* (`pipeline.research_pipeline`): `run_desk` →
+  optional `run_backtest(strategy)` → `evaluate_orders(desk.approved_orders)`
+  — desk research, strategy backtest, and risk review in one call, returning
+  `{"desk": …, "backtest": …|None, "risk": …}` plus enrichment keys.
+- *Desk economics* (via trade-agents): scout ideas scored as
+  `sharpe × min(1, n_trades/10) − 1.5 × max_drawdown`, allocated with
+  inverse-volatility weights `w_i ∝ 1/vol_i` (score-weighted fallback),
+  regime-tilted, capped, renormalized — then risk-vetoed before any order
+  is approved.
+- *Backtest loop* (via trade-backtest): event-driven, no lookahead (signals
+  at bar *t* fill at bar *t+1*'s open), adverse slippage in bps, FIFO
+  accounting, Sharpe/Sortino/max-drawdown/Calmar panel on simple returns.
+- *Risk review* (via trade-risk): order intents re-checked against the
+  limit stack — first veto wins, exits never blocked.
+- *Enrichments* (opt-in): `sentiment_price=True` attaches a per-symbol
+  sentiment-vs-price verdict (lead/lag, information coefficient, event
+  study); `factor_model="ff5"` attaches Fama-French regressions plus the
+  GRS joint-alpha test, fetching 750 days of bars to clear the 24-month
+  regression floor.
+- *Plain-data boundaries*: every workflow returns dicts/lists, never engine
+  objects — results serialize, log, and cross process boundaries cleanly,
+  which is where a future task queue or service split attaches.
+
+**Honest limitations.**
+
+- Demo data is synthetic and regime-clean; every number it produces is a
+  plumbing check, not evidence.
+- Workflows are only as complete as the installed modules — partial installs
+  degrade to clear "pip install …" errors rather than wrong answers.
+- The web dashboard runs jobs inline (no task queue yet), so heavy sweeps
+  block the server; the desktop dashboard runs them in background threads.
+- Sentiment and factor enrichments inherit their engines' demo caveats
+  (synthetic sentiment with a planted lead; synthetic factor dates).
+
 ## Changelog / License
 
 See [CHANGELOG.md](CHANGELOG.md). MIT — see [LICENSE](LICENSE).
