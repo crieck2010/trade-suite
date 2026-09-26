@@ -680,3 +680,280 @@ def summarize_correlation(result: dict) -> str:
     if dirty:
         lines.append(f"  data-quality flags: {', '.join(dirty)}")
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Terminal-wave workflows (trade-suite 0.5.0): the flagship
+# monitoring/analysis layer from trade-dashboard-web v0.5.0's
+# ``terminal_service`` — trade blotter, performance analytics, agent
+# activity, correlation network, and risk monitor.
+#
+# These are dashboard *views* over already-wired engines (trade-paper
+# ledgers, trade-agents track records, trade-hedge loop state, regime
+# snapshots), not new engines themselves — so they add no entries to the
+# module registry.  Same delegation pattern as above: each workflow calls
+# the canonical ``run_*_job`` via ``_services()`` (web engine first), so a
+# scripted run, a CLI run, and a dashboard run of the same job produce
+# identical results.  Parameter names mirror the canonical jobs exactly.
+# The desktop fallback may not carry the terminal jobs yet: missing jobs
+# raise the standard RuntimeError naming the fix instead of an
+# AttributeError.
+# ---------------------------------------------------------------------------
+
+def _terminal_job(name: str):
+    """Resolve a terminal-wave job from the dashboard services."""
+    services = _services()
+    job = getattr(services, name, None)
+    if job is None:
+        raise RuntimeError(
+            f"the installed dashboard services have no {name}; "
+            "install trade-dashboard-web >= 0.5.0 "
+            "(pip install git+https://github.com/crieck2010/"
+            "trade-dashboard-web.git)")
+    return job
+
+
+def run_trades(
+    ledger_path=None,
+    date_from=None,
+    date_to=None,
+    symbol=None,
+    side=None,
+    strategy=None,
+    agent=None,
+    outcome=None,
+    limit=500,
+) -> dict:
+    """Trade blotter over the trade-paper audit ledger (read-only).
+
+    Delegates to the canonical ``run_trades_job``: joins ``orders`` with
+    ``fills``, attributes realized P&L per order via FIFO lot matching,
+    and labels outcomes win/loss/open/unknown.  With no ledger found the
+    job returns a deterministic DEMO dataset (``demo: True``) rather than
+    failing — demo rows are never presented as real trades.
+    """
+    return _terminal_job("run_trades_job")(
+        ledger_path=ledger_path, date_from=date_from, date_to=date_to,
+        symbol=symbol, side=side, strategy=strategy, agent=agent,
+        outcome=outcome, limit=limit)
+
+
+def trades_to_csv(result: dict) -> str:
+    """Render a ``run_trades`` result as CSV (the web export shape)."""
+    return _terminal_job("trades_to_csv")(result)
+
+
+def run_performance(
+    source="paper",
+    ledger_path=None,
+    backtest=None,
+    backtest_path=None,
+    risk_free=0.0,
+) -> dict:
+    """Performance analytics: equity / drawdown / monthly / rolling.
+
+    Delegates to the canonical ``run_performance_job``.  ``source="paper"``
+    reads the ledger's ``equity_snapshots`` (falling back to a documented
+    reconstructed curve when absent); ``source="backtest"`` takes a
+    trade-backtest result dict or a path to its JSON output.  Win rate /
+    profit factor / expectancy come from per-trade P&Ls; Sharpe and vol
+    roll on a 63-day window; max drawdown is the positive peak-to-trough
+    fraction while the ``drawdown`` series is the underwater curve.
+    """
+    return _terminal_job("run_performance_job")(
+        source=source, ledger_path=ledger_path, backtest=backtest,
+        backtest_path=backtest_path, risk_free=risk_free)
+
+
+def run_agent_activity(
+    track_record_path=None,
+    approvals_ledger_path=None,
+    limit=50,
+) -> dict:
+    """Agent activity: leaderboards, Elo curves, Brier calibration, debates.
+
+    Delegates to the canonical ``run_agent_activity_job``: scores agents
+    from the trade-agents track-record JSONL with the engine's own
+    ``track_record`` functions, derives dashboard Elo curves and a Brier
+    calibration of risk-desk drawdown forecasts, and reads the debate
+    timeline plus approval queue from the paper ledger's ``approvals``
+    table (read-only).  Missing files yield graceful empties, never
+    errors.
+    """
+    return _terminal_job("run_agent_activity_job")(
+        track_record_path=track_record_path,
+        approvals_ledger_path=approvals_ledger_path, limit=limit)
+
+
+def run_network(
+    symbols=None,
+    source="yfinance",
+    days=252,
+    method="pearson",
+    seed=7,
+    breadth=None,
+    macro=None,
+    regime=None,
+) -> dict:
+    """Correlation network: correlation -> MST -> clusters -> layout.
+
+    Delegates to the canonical ``run_network_job``: sample correlation
+    (Pearson, or Spearman on ranks), chordal distance ``d = sqrt(2(1-ρ))``,
+    Kruskal MST, single-linkage clusters cutting edges longer than d=1.0
+    (ρ < 0.5 — an arbitrary, documented cut), and a seeded
+    Fruchterman-Reingold layout (deterministic given ``seed``).  With no
+    symbols the job returns the seeded synthetic DEMO universe instead of
+    fetching data.  ``breadth`` / ``macro`` / ``regime`` accept snapshot
+    dicts (or JSON paths) conforming to their schema-version contracts.
+    """
+    if symbols is not None:
+        symbols = _clean_symbols(symbols)
+    return _terminal_job("run_network_job")(
+        symbols=symbols, source=source, days=days, method=method, seed=seed,
+        breadth=breadth, macro=macro, regime=regime)
+
+
+def run_risk_monitor(
+    ledger_path=None,
+    hedge_state_path=None,
+    regime=None,
+    vol_days=63,
+) -> dict:
+    """Risk monitor: exposures, vol regime, kill-switch, conviction gauge.
+
+    Delegates to the canonical ``run_risk_monitor_job``: net positions
+    from ledger fills (mark = last fill price), net/gross exposure plus
+    Herfindahl concentration (beta-adjustment assumes β=1.0 per name —
+    the ledger carries no beta model, stated in the payload), trailing
+    21-day annualized realized-vol timeline, kill-switch status from a
+    persisted trade-hedge LoopState (``unknown`` when no state file), and
+    the regime arbiter's conviction + hysteresis state as the gauge.
+    """
+    return _terminal_job("run_risk_monitor_job")(
+        ledger_path=ledger_path, hedge_state_path=hedge_state_path,
+        regime=regime, vol_days=vol_days)
+
+
+def summarize_trades(result: dict) -> str:
+    """One-screen text summary of a trade blotter."""
+    trades = result.get("trades", [])
+    tag = " (DEMO — synthetic, not real trades)" if result.get("demo") else ""
+    lines = [f"Trade blotter: {result.get('count', len(trades))} rows{tag}"]
+    if trades:
+        lines.append("  ID              SYM    SIDE QTY     FILLED  "
+                     "AVG PX    PNL       OUTCOME  STRATEGY")
+        for t in trades[:12]:
+            pnl = t.get("realized_pnl")
+            lines.append(
+                f"  {str(t.get('id'))[:15]:15s} {str(t.get('symbol') or ''):6s} "
+                f"{str(t.get('side') or ''):4s} "
+                f"{(t.get('qty') or 0):>6.0f} "
+                f"{(t.get('filled_qty') or 0):>7.0f} "
+                f"{(t.get('avg_fill_price') or 0):>8.2f} "
+                f"{(pnl if pnl is not None else 0):+9.2f} "
+                f"{str(t.get('outcome') or '?'):7s} "
+                f"{t.get('strategy') or ''}")
+    msg = result.get("message")
+    if msg:
+        lines.append(f"  {msg}")
+    return "\n".join(lines)
+
+
+def summarize_performance(result: dict) -> str:
+    """One-screen text summary of performance analytics."""
+    s = result["summary"]
+    tag = " (DEMO — synthetic equity)" if result.get("demo") else ""
+    wr = s.get("win_rate")
+    lines = [
+        f"Performance ({result.get('source')}, "
+        f"{result.get('equity_source')}){tag}: "
+        f"{s.get('n_trades', 0)} trades"
+        + (f" · win rate {wr:.1%}" if wr is not None else "")
+        + (f" · profit factor {s['profit_factor']:.2f}"
+           if s.get("profit_factor") is not None else "")
+        + (f" · expectancy {s['expectancy']:+.2f}"
+           if s.get("expectancy") is not None else "")
+        + f" · max DD {s.get('max_drawdown', 0):.1%}"
+        + (f" · CAGR {s['cagr']:+.1%}" if s.get("cagr") is not None else ""),
+    ]
+    if result.get("equity_source") == "fills_reconstructed":
+        lines.append("  equity is a RECONSTRUCTED relative curve (cumulative "
+                     "FIFO realized P&L rebased at 0) — shape proxy only")
+    msg = result.get("message")
+    if msg:
+        lines.append(f"  {msg}")
+    return "\n".join(lines)
+
+
+def summarize_agent_activity(result: dict) -> str:
+    """One-screen text summary of agent activity."""
+    lb = result.get("leaderboards", {})
+    parts = []
+    for key in ("researcher", "risk_desk", "pm"):
+        rows = lb.get(key) or []
+        if rows:
+            top = rows[0]
+            parts.append(f"{key} {len(rows)} (top: {top.get('label')} "
+                         f"score={top.get('score', 0):.3f})")
+    boards = ", ".join(parts) if parts else "no leaderboards"
+    elo = result.get("elo_curves") or {}
+    brier = result.get("brier") or {}
+    brier_n = sum(brier.get("n") or [])
+    lines = [
+        f"Agent activity: {boards}",
+        f"  Elo curves: {len(elo)} agents · "
+        f"Brier calibration: {brier_n} forecast/outcome pairs · "
+        f"debates: {len(result.get('debates') or [])} · "
+        f"approvals pending: {len(result.get('approval_queue') or [])}",
+    ]
+    msg = result.get("message")
+    if msg:
+        lines.append(f"  {msg}")
+    return "\n".join(lines)
+
+
+def summarize_network(result: dict) -> str:
+    """One-screen text summary of a correlation network."""
+    p = result.get("params", {})
+    tag = " (DEMO — synthetic universe)" if p.get("demo") else ""
+    clusters = result.get("clusters") or []
+    lines = [
+        f"Network ({p.get('method')}, {p.get('source')}, {p.get('n_obs')} obs)"
+        f"{tag}: {len(result.get('nodes', []))} nodes, "
+        f"{len(result.get('edges', []))} edges, {len(clusters)} clusters "
+        f"(MST, single-linkage cut d≤{p.get('mst_cut_distance', 1.0)} = ρ≥0.5)",
+    ]
+    for c in clusters[:6]:
+        members = c.get("members") or []
+        lines.append(f"  cluster {c.get('id')}: {', '.join(members[:8])}"
+                     + (" …" if len(members) > 8 else ""))
+    if result.get("regime"):
+        lines.append(f"  regime overlay: conviction "
+                     f"{result['regime'].get('conviction')}")
+    return "\n".join(lines)
+
+
+def summarize_risk_monitor(result: dict) -> str:
+    """One-screen text summary of a risk-monitor report."""
+    exp = result.get("exposures", {})
+    tag = " (DEMO — synthetic book)" if result.get("demo") else ""
+    kill = result.get("kill_switch") or {}
+    gauge = result.get("regime") or {}
+    lines = [
+        f"Risk monitor{tag}: {exp.get('n_positions', 0)} positions · "
+        f"net ${exp.get('net_delta_dollars', 0):,.0f} · "
+        f"gross ${exp.get('gross_dollars', 0):,.0f} · "
+        f"Herfindahl {exp.get('herfindahl', 0):.3f} · "
+        f"kill-switch {kill.get('status', '?')}",
+    ]
+    lp = exp.get("largest_position") or {}
+    if lp.get("symbol"):
+        lines.append(f"  largest: {lp['symbol']} "
+                     f"({(lp.get('weight') or 0):.1%} of gross)")
+    if gauge.get("conviction") is not None:
+        lines.append(f"  regime conviction {gauge['conviction']:.0f} "
+                     f"({gauge.get('hysteresis_state') or '?'})")
+    msg = result.get("message")
+    if msg:
+        lines.append(f"  {msg}")
+    return "\n".join(lines)

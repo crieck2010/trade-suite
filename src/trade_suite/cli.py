@@ -1,7 +1,8 @@
 """Unified CLI: ``trade-suite status|doctor|demo|backtest|paper|sentiment|launch``
 plus the research-lab commands: ``factors|optimize|montecarlo|pairs|
-orderbook|sentiment-price|volsurface`` and the 0.4.0 market-context
-commands: ``breadth|macro|stream|reconcile``."""
+orderbook|sentiment-price|volsurface``, the 0.4.0 market-context commands:
+``breadth|macro|stream|reconcile``, and the 0.5.0 terminal wave:
+``trades|performance|agents|network|risk``."""
 
 from __future__ import annotations
 
@@ -271,6 +272,80 @@ def cmd_volsurface(args) -> int:
     return 0
 
 
+# -- terminal wave (0.5.0): dashboard monitoring views ------------------------
+
+def _trade_filter_kwargs(args) -> dict:
+    return {"ledger_path": args.ledger, "date_from": args.from_date,
+            "date_to": args.to, "symbol": args.symbol, "side": args.side,
+            "strategy": args.strategy, "agent": args.agent,
+            "outcome": args.outcome, "limit": args.limit}
+
+
+def cmd_trades(args) -> int:
+    from . import pipeline
+
+    if getattr(args, "trades_action", None) == "export":
+        result = pipeline.run_trades(**_trade_filter_kwargs(args))
+        csv_text = pipeline.trades_to_csv(result)
+        if args.out:
+            with open(args.out, "w", encoding="utf-8") as f:
+                f.write(csv_text)
+            print(f"Wrote {len(result.get('trades', []))} rows to {args.out}")
+        else:
+            print(csv_text, end="")
+        return 0
+
+    print("Fetching trade blotter …")
+    result = pipeline.run_trades(**_trade_filter_kwargs(args))
+    print(pipeline.summarize_trades(result))
+    return 0
+
+
+def cmd_performance(args) -> int:
+    from . import pipeline
+
+    if args.source == "backtest" and not args.backtest_path:
+        raise RuntimeError(
+            "performance --source backtest needs --backtest-path "
+            "(a trade-backtest result JSON)")
+    print(f"Computing performance analytics ({args.source}) …")
+    result = pipeline.run_performance(source=args.source,
+                                      backtest_path=args.backtest_path)
+    print(pipeline.summarize_performance(result))
+    return 0
+
+
+def cmd_agents(args) -> int:
+    from . import pipeline
+
+    print("Fetching agent activity …")
+    result = pipeline.run_agent_activity(limit=args.limit)
+    print(pipeline.summarize_agent_activity(result))
+    return 0
+
+
+def cmd_network(args) -> int:
+    from . import pipeline
+
+    symbols = _parse_symbols(args.symbols)
+    print(f"Building correlation network "
+          f"({', '.join(symbols) or 'demo universe'}) …")
+    result = pipeline.run_network(
+        symbols=symbols or None, source=args.source, days=args.days,
+        method=args.method, seed=args.seed)
+    print(pipeline.summarize_network(result))
+    return 0
+
+
+def cmd_risk(args) -> int:
+    from . import pipeline
+
+    print("Fetching risk monitor …")
+    result = pipeline.run_risk_monitor(vol_days=args.vol_days)
+    print(pipeline.summarize_risk_monitor(result))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="trade-suite",
@@ -400,6 +475,64 @@ def build_parser() -> argparse.ArgumentParser:
                    help="DEMO: reconcile the paper ledger against a mock "
                         "broker (trade-paper v0.2.0 machinery, read-only)")
 
+    # -- terminal wave (0.5.0) --
+    def _trade_filters(p: argparse.ArgumentParser) -> None:
+        p.add_argument("--from", dest="from_date", default=None,
+                       help="filter: created on/after YYYY-MM-DD")
+        p.add_argument("--to", default=None,
+                       help="filter: created on/before YYYY-MM-DD")
+        p.add_argument("--symbol", default=None)
+        p.add_argument("--side", default=None, choices=["buy", "sell"])
+        p.add_argument("--strategy", default=None)
+        p.add_argument("--agent", default=None,
+                       help="substring match over strategy + order id")
+        p.add_argument("--outcome", default=None,
+                       choices=["win", "loss", "open", "unknown"])
+        p.add_argument("--limit", type=int, default=500)
+        p.add_argument("--ledger", default=None,
+                       help="paper-ledger path (default: resolve standard "
+                            "locations)")
+
+    tr = sub.add_parser("trades",
+                        help="paper-ledger trade blotter (read-only)")
+    _trade_filters(tr)
+    tr_sub = tr.add_subparsers(dest="trades_action")
+    tr_exp = tr_sub.add_parser("export", help="export the blotter as CSV")
+    _trade_filters(tr_exp)
+    tr_exp.add_argument("--format", default="csv", choices=["csv"],
+                        help="export format (csv only for now)")
+    tr_exp.add_argument("--out", default=None,
+                        help="write to FILE instead of stdout")
+
+    pf = sub.add_parser("performance",
+                        help="equity/drawdown/monthly/rolling analytics")
+    pf.add_argument("--source", default="paper", choices=["paper", "backtest"])
+    pf.add_argument("--backtest-path", default=None,
+                    help="JSON path to a trade-backtest result "
+                         "(with --source backtest)")
+
+    ag = sub.add_parser("agents",
+                        help="agent track-record leaderboards, Elo, debates")
+    ag.add_argument("--limit", type=int, default=50)
+
+    nw = sub.add_parser("network",
+                        help="correlation MST network (trade-eda maths)")
+    nw.add_argument("--symbols", default="",
+                    help="comma-separated symbols; empty = seeded demo "
+                         "universe (no network)")
+    nw.add_argument("--source", default="yfinance",
+                    choices=["yfinance", "demo"])
+    nw.add_argument("--days", type=int, default=252)
+    nw.add_argument("--method", default="pearson",
+                    choices=["pearson", "spearman"])
+    nw.add_argument("--seed", type=int, default=7)
+
+    rk = sub.add_parser("risk",
+                        help="exposures, vol regime, kill-switch, "
+                             "regime-conviction gauge")
+    rk.add_argument("--vol-days", type=int, default=63,
+                    help="vol-regime timeline length in days")
+
     return parser
 
 
@@ -424,6 +557,11 @@ def main(argv: list[str] | None = None) -> int:
         "macro": cmd_macro,
         "stream": cmd_stream,
         "reconcile": cmd_reconcile,
+        "trades": cmd_trades,
+        "performance": cmd_performance,
+        "agents": cmd_agents,
+        "network": cmd_network,
+        "risk": cmd_risk,
         "launch": cmd_launch,
     }
     try:

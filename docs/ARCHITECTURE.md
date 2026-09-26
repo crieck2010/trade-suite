@@ -32,6 +32,11 @@ root** of the system:
 │                run_factor_analysis / run_vol_surface /   │
 │                run_sentiment_price — one thin workflow   │
 │                per new engine, plain-data in/out         │
+│  terminal 0.5  run_trades (+trades_to_csv) /             │
+│  (views)       run_performance / run_agent_activity /   │
+│                run_network / run_risk_monitor —          │
+│                dashboard views over wired engines,      │
+│                no new registry entries                  │
 │  cli.py        status | doctor | demo | backtest |        │
 │                paper | sentiment | launch |              │
 │                pairs | orderbook | optimize | montecarlo │
@@ -91,6 +96,28 @@ only renders the plain-data result.
   `from_option_chain`, archived sentiment rows via
   `run_sentiment_price(..., sentiment_rows=...)` — no workflow signatures
   change when a real source replaces demo data.
+
+## The terminal-wave wiring pattern (0.5.0)
+
+The five terminal jobs — `run_trades_job`, `run_performance_job`,
+`run_agent_activity_job`, `run_network_job`, `run_risk_monitor_job` (+
+`trades_to_csv`) — are canonical in `trade-dashboard-web`'s
+`terminal_service`; the suite wires them in as *views*, not engines. A
+view reads already-wired engines (the paper ledger, the agents
+track-record JSONL, the trade-hedge loop state, regime snapshots) and
+presents them — it introduces no new engine of record, so no registry
+entry is added and `env.MODULES` stays at 23. The delegation keeps the
+0.2.0/0.3.0/0.4.0 guarantees: thin `pipeline.py` workflows with
+parameter names identical to the canonical jobs, lazy sibling imports,
+missing-dashboard → `RuntimeError` naming the fix. One refinement:
+`pipeline._terminal_job(name)` resolves the job attribute on the
+service object, so a desktop fallback that predates the 0.5.0 jobs
+raises the standard `RuntimeError` (install
+`trade-dashboard-web>=0.5.0`) instead of a bare `AttributeError`.
+
+The honest-counting rule: a wave that wires existing engines adds CLI
+surface and docs, not registry rows. The changelog and README say so
+explicitly, so the module count never inflates silently.
 
 ## Dependency rules
 

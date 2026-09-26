@@ -4,6 +4,46 @@ All notable changes to `trade-suite` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-09-26
+
+### Added
+- Wired in the **terminal wave** from trade-dashboard-web v0.5.0: five
+  monitoring/analysis workflows delegating to the dashboards' canonical
+  `run_trades_job` / `run_performance_job` / `run_agent_activity_job` /
+  `run_network_job` / `run_risk_monitor_job` via `pipeline._services()`
+  (web engine first), so scripted, CLI, and dashboard runs of the same
+  job agree exactly:
+  - `pipeline.run_trades` + `summarize_trades` + `pipeline.trades_to_csv`
+    — read-only paper-ledger blotter (FIFO realized P&L, win/loss/open/
+    outcome labels) with the web CSV export shape; new
+    `trade-suite trades [--from/--to/--symbol/--side/--strategy/--agent/--outcome/--limit]`
+    and `trade-suite trades export --format csv [--out FILE]`.
+  - `pipeline.run_performance` + `summarize_performance` — equity,
+    drawdown, monthly, 63-day rolling Sharpe/vol, return histogram, and
+    trade-P&L summary; new `trade-suite performance --source paper|backtest
+    [--backtest-path]`.
+  - `pipeline.run_agent_activity` + `summarize_agent_activity` —
+    track-record leaderboards, Elo curves, Brier calibration, debate
+    timeline, approval queue; new `trade-suite agents [--limit]`.
+  - `pipeline.run_network` + `summarize_network` — correlation → MST →
+    clusters → seeded layout; new `trade-suite network [--symbols]
+    [--source yfinance|demo] [--days] [--method] [--seed]`
+    (no `--symbols` = seeded demo universe, no network).
+  - `pipeline.run_risk_monitor` + `summarize_risk_monitor` — exposures,
+    vol-regime timeline, trade-hedge kill-switch, regime-conviction
+    gauge; new `trade-suite risk [--vol-days]`.
+- These are dashboard *views* over already-wired engines (trade-paper
+  ledgers, trade-agents track records, trade-hedge loop state, regime
+  snapshots), not new engines: the module registry stays at 23
+  (`env.MODULES` unchanged) — documented in the README and ARCHITECTURE.
+- Parameter names mirror the canonical web jobs exactly; the math itself
+  is documented in trade-dashboard-web's `docs/METHODOLOGY.md` and is
+  summarized (not duplicated) in the README's `## The maths` section.
+- A missing dashboard raises the standard `RuntimeError`; when the
+  desktop fallback lacks the terminal jobs, `pipeline._terminal_job`
+  raises a `RuntimeError` naming the `trade-dashboard-web>=0.5.0`
+  install instead of surfacing an `AttributeError`.
+
 ## [0.4.0] - 2026-09-24
 
 ### Added

@@ -118,6 +118,26 @@ trade-suite stream --symbols AAA,BBB,CCC --ticks 600
 # (trade-paper v0.2.0 machinery; can never touch live state)
 trade-suite reconcile
 
+# --- terminal wave (0.5.0): dashboard monitoring views ---
+
+# paper-ledger trade blotter (read-only; DEMO rows when no ledger found)
+trade-suite trades --symbol SPY --outcome win --limit 20
+
+# blotter CSV export to stdout or --out file
+trade-suite trades export --from 2026-01-01 --out blotter.csv
+
+# performance analytics: equity/drawdown/monthly/rolling (paper ledger)
+trade-suite performance --source paper
+
+# agent activity: leaderboards, Elo curves, Brier calibration, debates
+trade-suite agents --limit 50
+
+# correlation MST network (empty --symbols = seeded demo universe, no network)
+trade-suite network --symbols SPY,QQQ,DIA,IWM --method pearson --seed 7
+
+# risk monitor: exposures, vol regime, kill-switch, regime-conviction gauge
+trade-suite risk --vol-days 63
+
 # launch a dashboard
 trade-suite launch web
 trade-suite launch desktop
@@ -200,6 +220,31 @@ print(pipeline.summarize_stream_demo(st))
 rec = pipeline.run_reconcile_demo()
 print(pipeline.summarize_reconcile(rec))
 
+# --- terminal wave (0.5.0): dashboard monitoring views ---
+
+# trade blotter over the paper ledger (read-only; DEMO rows if no ledger)
+trades = pipeline.run_trades(symbol="SPY", outcome="win", limit=20)
+print(pipeline.summarize_trades(trades))
+
+# blotter as CSV (the web export shape)
+csv_text = pipeline.trades_to_csv(trades)
+
+# performance analytics (paper ledger, or a trade-backtest result JSON)
+perf = pipeline.run_performance(source="paper")
+print(pipeline.summarize_performance(perf))
+
+# agent activity: leaderboards, Elo curves, Brier calibration, debates
+act = pipeline.run_agent_activity()
+print(pipeline.summarize_agent_activity(act))
+
+# correlation MST network (no symbols = seeded demo universe, no network)
+net = pipeline.run_network()
+print(pipeline.summarize_network(net))
+
+# risk monitor: exposures, vol regime, kill-switch, conviction gauge
+risk = pipeline.run_risk_monitor()
+print(pipeline.summarize_risk_monitor(risk))
+
 # enrich the desk pipeline with sentiment-vs-price + factor exposures
 out = pipeline.research_pipeline(["SPY"], sentiment_price=True, factor_model="ff5")
 ```
@@ -220,7 +265,7 @@ trade-suite/
 │   ├── licensing.py               # license-key check hook
 │   └── updates.py                 # GitHub-releases update-check hook
 ├── examples/end_to_end_demo.py
-├── tests/                         # 91 tests (full-env; skip-not-fail bare)
+├── tests/                         # 125 tests (full-env; skip-not-fail bare)
 ├── docs/ARCHITECTURE.md
 ├── requirements.txt               # one-line-per-module install
 ├── CHANGELOG.md / LICENSE (MIT)
@@ -280,7 +325,7 @@ PYTHONPATH=src:../trade-dashboard-web/src:../trade-dashboard-desktop/src:\
   python -m pytest tests/ -q
 ```
 
-38 tests. Sibling-dependent tests use `pytest.importorskip`, so the suite
+125 tests. Sibling-dependent tests use `pytest.importorskip`, so the suite
 also runs (partially skipped) against a bare install.
 
 ## The maths
@@ -322,11 +367,43 @@ three times.
 - *Plain-data boundaries*: every workflow returns dicts/lists, never engine
   objects — results serialize, log, and cross process boundaries cleanly,
   which is where a future task queue or service split attaches.
+- *Terminal wave* (0.5.0, via `trade-dashboard-web` `terminal_service` —
+  derivations are documented in that repo's `docs/METHODOLOGY.md`):
+  - `run_trades` — trade blotter: FIFO lot matching per symbol over fills,
+    realized P&L attributed to the closing fill's order, outcomes
+    win/loss/open/unknown; `trades_to_csv` renders the export shape.
+  - `run_performance` — equity curve, underwater drawdown series vs.
+    positive peak-to-trough max drawdown, monthly heatmap, 63-day rolling
+    Sharpe/vol, return histogram, and trade-P&L summary (win rate, profit
+    factor, expectancy, CAGR).
+  - `run_agent_activity` — track-record leaderboards scored by the
+    trade-agents engine's own functions, dashboard Elo curves (K=32 vs. a
+    fixed 1500 "market"), Brier calibration of risk-desk drawdown
+    forecasts, debate timeline and approval queue from the paper ledger.
+  - `run_network` — sample correlation (Pearson, or Spearman on ranks) →
+    chordal distance `d = sqrt(2(1−ρ))` → Kruskal MST → single-linkage
+    clusters (edge cut at d=1.0, i.e. ρ≥0.5) → seeded Fruchterman-Reingold
+    layout (deterministic given `seed`).
+  - `run_risk_monitor` — net/gross exposure and Herfindahl concentration
+    from ledger fills (mark = last fill price; β=1.0 per name — the ledger
+    carries no beta model), trailing 21-day annualized realized-vol
+    timeline, trade-hedge kill-switch state, and the trade-regime arbiter's
+    conviction + hysteresis state as the gauge.
+- *No new engines, no registry inflation*: the five terminal views read
+  already-wired engines (trade-paper, trade-agents, trade-hedge,
+  trade-regime) through the dashboard's canonical jobs — they add no
+  entries to `env.MODULES`, which stays at 23.
 
 **Honest limitations.**
 
 - Demo data is synthetic and regime-clean; every number it produces is a
   plumbing check, not evidence.
+- The terminal jobs' demo/approximation labels are load-bearing: the
+  blotter's `agent` filter is a substring match over strategy + order id
+  (the ledger has no per-order agent column), FIFO ignores short-first
+  ledgers, the network's cluster cut is an arbitrary documented choice,
+  and risk marks use the last fill price (stale the moment the book
+  trades). Read the summaries' parentheticals — they say which.
 - Workflows are only as complete as the installed modules — partial installs
   degrade to clear "pip install …" errors rather than wrong answers.
 - The web dashboard runs jobs inline (no task queue yet), so heavy sweeps
