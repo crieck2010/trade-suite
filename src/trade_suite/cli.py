@@ -170,6 +170,23 @@ def cmd_optimize(args) -> int:
     return 0
 
 
+def cmd_allocate(args) -> int:
+    import json as _json
+
+    from . import pipeline
+
+    print(f"Allocating ({args.method}) …")
+    result = pipeline.run_allocate(
+        method=args.method, max_weight=args.max_weight,
+        inputs_path=args.inputs, seed=args.seed,
+        strict_portfolio_gates=args.strict_gates)
+    if args.json:
+        print(_json.dumps(result, indent=2, default=str))
+    else:
+        print(pipeline.summarize_allocate(result))
+    return 0
+
+
 def cmd_montecarlo(args) -> int:
     from . import pipeline
 
@@ -414,6 +431,22 @@ def build_parser() -> argparse.ArgumentParser:
                               "equal_weight"])
     opt.add_argument("--max-weight", type=float, default=1.0)
 
+    al = sub.add_parser("allocate",
+                        help="allocate across validated strategies "
+                             "(trade-allocate)")
+    al.add_argument("--method", default="risk_parity",
+                    choices=["risk_parity", "hrp", "equal"])
+    al.add_argument("--max-weight", type=float, default=0.5,
+                    help="cap on any single strategy's weight")
+    al.add_argument("--inputs", default=None,
+                    help="JSON file of strategy inputs "
+                         "(default: seeded demo)")
+    al.add_argument("--seed", type=int, default=7)
+    al.add_argument("--strict-gates", action="store_true",
+                    help="portfolio gates raise instead of just reporting")
+    al.add_argument("--json", action="store_true",
+                    help="print the raw result JSON")
+
     mc = sub.add_parser("montecarlo", help="simulated portfolio VaR/CVaR")
     mc.add_argument("--symbols", default="SPY,AAPL")
     mc.add_argument("--weights", default="",
@@ -548,6 +581,7 @@ def main(argv: list[str] | None = None) -> int:
         "pairs": cmd_pairs,
         "orderbook": cmd_orderbook,
         "optimize": cmd_optimize,
+        "allocate": cmd_allocate,
         "montecarlo": cmd_montecarlo,
         "factors": cmd_factors,
         "sentiment-price": cmd_sentiment_price,

@@ -139,6 +139,14 @@ trade-suite network --symbols SPY,QQQ,DIA,IWM --method pearson --seed 7
 # risk monitor: exposures, vol regime, kill-switch, regime-conviction gauge
 trade-suite risk --vol-days 63
 
+# --- allocate (0.7.0): strategy allocation across validated strategies ---
+
+# allocate (DEMO: synthetic strategies + synthetic evidence, seeded, offline)
+trade-suite allocate --method risk_parity
+
+# allocate over real validated strategies from a JSON inputs file
+trade-suite allocate --method hrp --inputs strategies.json --json
+
 # launch a dashboard
 trade-suite launch web
 trade-suite launch desktop

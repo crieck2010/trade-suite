@@ -9,6 +9,8 @@ at ``import trade_suite`` time.
 
 from __future__ import annotations
 
+import json
+
 from . import data as _data
 
 
@@ -471,6 +473,81 @@ def summarize_optimize(result: dict) -> str:
              f"Sharpe={result['sharpe']:.2f}"]
     top = sorted(result["weights"].items(), key=lambda kv: -kv[1])[:6]
     lines.append("  weights: " + ", ".join(f"{s}={w:.2%}" for s, w in top))
+    return "\n".join(lines)
+
+
+def run_allocate(
+    method: str = "risk_parity",
+    max_weight: float = 0.5,
+    inputs_path: str | None = None,
+    seed: int = 7,
+    strict_portfolio_gates: bool = False,
+) -> dict:
+    """Allocate across validated strategies (trade-allocate).
+
+    Default runs the seeded demo: synthetic strategy streams with synthetic
+    gate-pass evidence — clearly labeled, deterministic, offline. Pass
+    ``inputs_path`` (JSON: {strategy_id: {"returns": [[ts, r], ...],
+    "evidence": {...}}}) to allocate over real validated strategies.
+
+    Returns the canonical trade-allocate result dict (JSON-serializable):
+    the CLI and library paths run the same engine, so they agree exactly.
+    """
+    if method not in ("risk_parity", "hrp", "equal"):
+        raise ValueError("method must be risk_parity | hrp | equal")
+    try:
+        from trade_allocate import adapters as _adapters
+        from trade_allocate import demo as _demo
+        from trade_allocate import pipeline as _alloc
+    except ImportError:
+        raise RuntimeError(
+            "allocate workflow needs trade-allocate installed "
+            "(pip install git+https://github.com/crieck2010/trade-allocate.git)")
+    if inputs_path:
+        with open(inputs_path, encoding="utf-8") as f:
+            raw = json.load(f)
+        strategy_inputs = {
+            sid: _adapters.strategy_input(
+                sid, spec["returns"], spec["evidence"],
+                lifecycle_state=spec.get("lifecycle_state"),
+                recent=spec.get("recent"))
+            for sid, spec in raw.items()
+        }
+        demo = False
+    else:
+        streams = _demo.synthetic_streams(seed=seed)
+        strategy_inputs = {
+            sid: _adapters.strategy_input(sid, series,
+                                          _demo.synthetic_evidence(sid))
+            for sid, series in streams.items()
+        }
+        demo = True
+    result = _alloc.run(strategy_inputs, method=method, max_weight=max_weight,
+                        strict_portfolio_gates=strict_portfolio_gates)
+    result["suite_demo"] = demo
+    return result
+
+
+def summarize_allocate(result: dict) -> str:
+    """One-screen text summary of a strategy allocation."""
+    tag = ("DEMO (synthetic strategies + synthetic evidence)"
+           if result.get("suite_demo") else "real inputs")
+    lines = [f"Allocate [{tag}] method={result['method']} "
+             f"n={len(result['ids'])}"]
+    top = sorted(result["weights_by_id"].items(), key=lambda kv: -kv[1])
+    lines.append("  weights: " + ", ".join(f"{s}={w:.2%}" for s, w in top))
+    pg = result["portfolio_gates"]
+    m = pg["metrics"]
+    lines.append(f"  portfolio gates: {'PASS' if pg['passed'] else 'FAIL'} "
+                 f"(Sharpe={m['sharpe']:.2f} "
+                 f"maxDD={m['max_drawdown']:.2%} "
+                 f"DR={m['diversification_ratio']:.2f})")
+    if result["deallocated"]:
+        lines.append("  deallocated: " + ", ".join(result["deallocated"]))
+    drift = (f"{result['max_drift']:.2%}" if result["max_drift"] is not None
+             else "n/a (first allocation)")
+    lines.append(f"  turnover: {result['turnover_action']} (max drift {drift})")
+    lines.extend(f"  note: {n}" for n in result["notes"])
     return "\n".join(lines)
 
 

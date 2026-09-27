@@ -4,6 +4,17 @@ All notable changes to `trade-suite` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-09-26
+
+### Added
+- `pipeline.run_allocate` + `pipeline.summarize_allocate` and the
+  `trade-suite allocate` CLI command, delegating to trade-allocate's
+  canonical pipeline (risk_parity | hrp | equal). Default is the seeded
+  demo (synthetic strategies + synthetic evidence, clearly labeled,
+  deterministic, offline); `--inputs FILE` allocates over real validated
+  strategies from a JSON inputs file. CLI and library paths run the same
+  engine, so they agree exactly (tested).
+
 ## [0.6.0] - 2026-09-26
 
 ### Added
