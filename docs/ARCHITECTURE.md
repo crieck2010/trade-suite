@@ -5,7 +5,7 @@
 `trade-suite` contains no trading logic of its own. It is the **composition
 root** of the system:
 
-1. **One install** — `pyproject.toml` declares all twenty-three modules as
+1. **One install** — `pyproject.toml` declares all twenty-four modules as
    `git+https` dependencies, so `pip install
    git+https://github.com/crieck2010/trade-suite.git` provisions the whole
    system.

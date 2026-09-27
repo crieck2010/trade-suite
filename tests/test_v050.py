@@ -78,12 +78,14 @@ _TERMINAL_JOBS = ("run_trades_job", "run_performance_job",
 # The 0.5.0 terminal jobs are dashboard *views* over already-wired engines
 # (trade-paper ledgers, trade-agents track records, trade-hedge state).
 # They live in trade-dashboard-web (already registered) and add no
-# registry entries of their own.
+# registry entries of their own. trade-allocate (0.6.0) is a new engine,
+# so the registry grows to twenty-four.
 
-def test_registry_stays_twenty_three():
+def test_registry_now_twenty_four():
     dists = [m.dist for m in env.MODULES]
-    assert len(env.MODULES) == 23
+    assert len(env.MODULES) == 24
     assert "trade-dashboard-web" in dists
+    assert "trade-allocate" in dists
 
 
 # -- delegation (stubbed services; runs anywhere) -----------------------------

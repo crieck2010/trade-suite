@@ -1,13 +1,13 @@
 # trade-suite
 
 The meta-package for the **trade-suite** algorithmic and agentic trading
-system: one install for all twenty-three modules, environment introspection,
+system: one install for all twenty-four modules, environment introspection,
 end-to-end research workflows, and a unified CLI.
 
 > **Research tooling only.** Backtesting, research, and paper-trading
 > software. It does not trade live and it is not investment advice.
 
-## The twenty-three modules
+## The twenty-four modules
 
 | Module | Role |
 |---|---|
@@ -24,6 +24,7 @@ end-to-end research workflows, and a unified CLI.
 | [trade-pairs](https://github.com/crieck2010/trade-pairs) | Pairs trading: cointegration screen, hedge ratios, signals |
 | [trade-orderbook](https://github.com/crieck2010/trade-orderbook) | Limit-order-book simulator and execution analytics |
 | [trade-optimize](https://github.com/crieck2010/trade-optimize) | Markowitz portfolio optimization and rebalancing |
+| [trade-allocate](https://github.com/crieck2010/trade-allocate) | Strategy allocation: risk parity / HRP across validated strategies |
 | [trade-montecarlo](https://github.com/crieck2010/trade-montecarlo) | Monte Carlo simulation: VaR/CVaR, drawdowns, scenarios |
 | [trade-volsurface](https://github.com/crieck2010/trade-volsurface) | Volatility surfaces: SVI fits, arbitrage checks, local vol |
 | [trade-factors](https://github.com/crieck2010/trade-factors) | Factor analysis: Fama-French regressions, GRS, risk models |

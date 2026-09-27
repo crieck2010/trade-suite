@@ -67,10 +67,10 @@ def _stub_services(monkeypatch, **jobs):
 
 # -- registry ----------------------------------------------------------------
 
-def test_registry_has_twenty_three_including_new_three():
+def test_registry_has_twenty_four_including_new_four():
     dists = [m.dist for m in env.MODULES]
-    assert len(env.MODULES) == 23
-    for dist in ("trade-breadth", "trade-macro", "trade-stream"):
+    assert len(env.MODULES) == 24
+    for dist in ("trade-breadth", "trade-macro", "trade-stream", "trade-allocate"):
         assert dist in dists
         mod = next(m for m in env.MODULES if m.dist == dist)
         assert mod.package.startswith("trade_")

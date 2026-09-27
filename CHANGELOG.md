@@ -4,6 +4,16 @@ All notable changes to `trade-suite` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and versioning follows [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-09-26
+
+### Added
+- Registered **trade-allocate v0.1.0** as the twenty-fourth suite module:
+  strategy allocation across validated strategies (risk parity / HRP /
+  equal weight, OAS correlation shrinkage, turnover damping, deallocation
+  on health breach, portfolio-level gates). Wired into the module table,
+  `requirements.txt`, `pyproject.toml` dependencies, and the `env.MODULES`
+  registry.
+
 ## [0.5.0] - 2026-09-26
 
 ### Added
