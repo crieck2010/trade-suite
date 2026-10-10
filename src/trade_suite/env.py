@@ -162,14 +162,24 @@ def status_table() -> str:
     rows = module_status()
     width = max(len(r["dist"]) for r in rows)
     lines = []
+    import sys
+    can_unicode = True
+    try:
+        if sys.stdout and getattr(sys.stdout, "encoding", None):
+            "✓".encode(sys.stdout.encoding)
+    except Exception:
+        can_unicode = False
+    ok_mark = "✓" if can_unicode else "[+]"
+    bad_mark = "✗" if can_unicode else "[-]"
     for r in rows:
-        mark = "✓" if r["installed"] else "✗"
+        mark = ok_mark if r["installed"] else bad_mark
         lines.append(f"  {mark} {r['dist']:<{width}}  v{r['version']:<8}  {r['role']}")
     n = sum(1 for r in rows if r["installed"])
     lines.append(f"\n{n}/{len(rows)} modules installed")
     missing = [r for r in rows if not r["installed"]]
     if missing:
+        ellipsis_char = "…" if can_unicode else "..."
         lines.append("Install missing modules with, e.g.:")
         lines.append(f"  pip install git+{missing[0]['repo']}.git")
-        lines.append("…or everything at once: pip install -r requirements.txt")
+        lines.append(f"{ellipsis_char}or everything at once: pip install -r requirements.txt")
     return "\n".join(lines)

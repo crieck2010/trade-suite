@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trade-suite"
-version = "0.7.0"
-description = "Meta-package tying together the trade-suite algorithmic/agentic trading system: one install, environment introspection, end-to-end research workflows, and a unified CLI"
+version = "1.0.0"
+description = "Consolidated algorithmic and agentic trading system: 36 engines, multi-agent debate research desk, backtesting, risk limits, factor models, and unified CLI"
 readme = "README.md"
 license = { text = "MIT" }
-authors = [{ name = "crieck2010" }]
+authors = [{ name = "Charles Rieck", email = "crieck2010@users.noreply.github.com" }]
 requires-python = ">=3.10"
-keywords = ["trading", "backtesting", "quantitative", "agents", "dashboard"]
+keywords = ["trading", "backtesting", "quantitative", "agents", "finance", "risk", "factors"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -18,37 +18,48 @@ classifiers = [
     "Topic :: Office/Business :: Financial",
 ]
 dependencies = [
-    "trade-data-equities @ git+https://github.com/crieck2010/trade-data-equities.git",
-    "trade-data-options @ git+https://github.com/crieck2010/trade-data-options.git",
-    "trade-data-futures @ git+https://github.com/crieck2010/trade-data-futures.git",
-    "trade-data-crypto @ git+https://github.com/crieck2010/trade-data-crypto.git",
-    "trade-backtest @ git+https://github.com/crieck2010/trade-backtest.git",
-    "trade-strategies @ git+https://github.com/crieck2010/trade-strategies.git",
-    "trade-risk @ git+https://github.com/crieck2010/trade-risk.git",
-    "trade-agents @ git+https://github.com/crieck2010/trade-agents.git",
-    "trade-paper @ git+https://github.com/crieck2010/trade-paper.git",
-    "trade-sentiment @ git+https://github.com/crieck2010/trade-sentiment.git",
-    "trade-pairs @ git+https://github.com/crieck2010/trade-pairs.git",
-    "trade-orderbook @ git+https://github.com/crieck2010/trade-orderbook.git",
-    "trade-optimize @ git+https://github.com/crieck2010/trade-optimize.git",
-    "trade-allocate @ git+https://github.com/crieck2010/trade-allocate.git",
-    "trade-montecarlo @ git+https://github.com/crieck2010/trade-montecarlo.git",
-    "trade-volsurface @ git+https://github.com/crieck2010/trade-volsurface.git",
-    "trade-factors @ git+https://github.com/crieck2010/trade-factors.git",
-    "trade-sentiment-vs-price @ git+https://github.com/crieck2010/trade-sentiment-vs-price.git",
-    "trade-eda @ git+https://github.com/crieck2010/trade-eda.git",
-    "trade-breadth @ git+https://github.com/crieck2010/trade-breadth.git",
-    "trade-macro @ git+https://github.com/crieck2010/trade-macro.git",
-    "trade-stream @ git+https://github.com/crieck2010/trade-stream.git",
-    "trade-dashboard-web @ git+https://github.com/crieck2010/trade-dashboard-web.git",
-    "trade-dashboard-desktop @ git+https://github.com/crieck2010/trade-dashboard-desktop.git",
+    "numpy>=1.20",
 ]
 
 [project.optional-dependencies]
 live = ["yfinance"]
+test = ["pytest"]
 
 [project.scripts]
 trade-suite = "trade_suite.cli:main"
+trade-agents = "trade_agents.cli:main"
+trade-agents-dissent = "trade_agents.dissent:main"
+trade-agents-ideas = "trade_agents.idea_journal:main"
+trade-allocate = "trade_allocate.cli:main"
+trade-backtest-adversarial = "trade_backtest.adversarial:main"
+trade-breadth = "trade_breadth.cli:main"
+trade-dashboard-desktop = "trade_dashboard_desktop.__main__:main"
+trade-dashboard-web = "trade_dashboard_web.__main__:main"
+trade-data-options-em = "trade_data_options.cli_em:main"
+trade-decay = "trade_decay.cli:main"
+trade-drift = "trade_drift.cli:main"
+trade-eda = "trade_eda.cli:main"
+trade-factors = "trade_factors.cli:main"
+trade-hedge = "trade_hedge.cli:main"
+trade-incubate = "trade_incubate.cli:main"
+trade-lifecycle = "trade_lifecycle.cli:main"
+trade-macro = "trade_macro.cli:main"
+trade-mandate = "trade_mandate.cli:main"
+trade-montecarlo = "trade_montecarlo.cli:main"
+trade-multitest = "trade_multitest.cli:main"
+trade-optimize = "trade_optimize.cli:main"
+trade-orderbook = "trade_orderbook.cli:main"
+trade-overfit = "trade_overfit.cli:main"
+trade-pairs = "trade_pairs.cli:main"
+trade-paper = "trade_paper.cli:main"
+trade-regime = "trade_regime.cli:main"
+trade-screener = "trade_screener.cli:main"
+trade-sentiment = "trade_sentiment.cli:main"
+trade-sentiment-vs-price = "trade_sentiment_vs_price.cli:main"
+trade-stream = "trade_stream.cli:main"
+trade-swing = "trade_swing.cli:main"
+trade-volforecast = "trade_volforecast.cli:main"
+trade-volsurface = "trade_volsurface.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/crieck2010/trade-suite"
@@ -59,3 +70,4 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]

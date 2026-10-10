@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>trade-dashboard-web</title>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<header>
+  <h1>trade-dashboard-web</h1>
+  <nav id="tabs">
+    <button data-tab="backtest" class="active">Backtest Lab</button>
+    <button data-tab="strategies">Strategies</button>
+    <button data-tab="desk">Agent Desk</button>
+    <button data-tab="risk">Risk</button>
+    <button data-tab="paper">Paper</button>
+    <button data-tab="data">Data</button>
+    <button data-tab="live">Live</button>
+    <button data-tab="research">Research Lab</button>
+    <button data-tab="trades">Trades</button>
+    <button data-tab="perf">Performance</button>
+    <button data-tab="agents">Agents</button>
+    <button data-tab="network">Network</button>
+    <button data-tab="riskmon">Risk</button>
+  </nav>
+</header>
+<main>
+  <section id="tab-backtest" class="tab active">
+    <div class="card form">
+      <label>Strategy <select id="bt-strategy"></select></label>
+      <label>Symbols (comma-separated) <input id="bt-symbols" value="SPY, AAPL"></label>
+      <label>Source <select id="bt-source"></select></label>
+      <label>Params (JSON) <input id="bt-params" value="{}" spellcheck="false"></label>
+      <label>Cash <input id="bt-cash" type="number" value="100000"></label>
+      <button id="bt-run">Run backtest</button>
+    </div>
+    <div id="bt-error" class="error"></div>
+    <div class="card"><h3>Equity curve</h3><div id="bt-chart"></div></div>
+    <div class="card"><h3>Metrics</h3><div id="bt-metrics" class="metrics"></div></div>
+    <div class="card"><h3>Trades</h3><div id="bt-trades" class="tablewrap"></div></div>
+  </section>
+
+  <section id="tab-strategies" class="tab">
+    <div id="strat-list" class="cards"></div>
+  </section>
+
+  <section id="tab-desk" class="tab">
+    <div class="card form">
+      <label>Symbols (comma-separated) <input id="desk-symbols" value="SPY, AAPL, MSFT, BTC-USD"></label>
+      <label>Source <select id="desk-source"></select></label>
+      <label>Equity <input id="desk-equity" type="number" value="100000"></label>
+      <button id="desk-run">Run desk</button>
+    </div>
+    <div id="desk-error" class="error"></div>
+    <div class="card"><h3>Report</h3><pre id="desk-summary"></pre></div>
+    <div class="card"><h3>Briefs &amp; ideas</h3><div id="desk-briefs"></div></div>
+    <div class="card"><h3>Allocations</h3><div id="desk-allocs" class="tablewrap"></div></div>
+    <div class="card"><h3>Vetoes</h3><div id="desk-vetoes" class="tablewrap"></div></div>
+  </section>
+
+  <section id="tab-risk" class="tab">
+    <div class="card"><h3>Available limits</h3><div id="risk-limits" class="tablewrap"></div></div>
+    <div class="card form">
+      <label>Limits JSON <span class="hint">[[name, params], ...]</span>
+        <textarea id="risk-limits-json" rows="4" spellcheck="false">[["symbol_blocklist", {"symbols": []}], ["max_position_notional", {"max_pct": 0.25}], ["max_gross_exposure", {"max_pct": 1.0}]]</textarea></label>
+      <label>Orders JSON <span class="hint">[{symbol, side, quantity, price}]</span>
+        <textarea id="risk-orders-json" rows="4" spellcheck="false">[{"symbol": "SPY", "side": "LONG", "quantity": 100, "price": 500}, {"symbol": "AAPL", "side": "LONG", "quantity": 200, "price": 250}]</textarea></label>
+      <label>Equity <input id="risk-equity" type="number" value="100000"></label>
+      <button id="risk-run">Evaluate</button>
+    </div>
+    <div id="risk-error" class="error"></div>
+    <div class="card"><h3>Approved</h3><div id="risk-approved" class="tablewrap"></div></div>
+    <div class="card"><h3>Vetoed</h3><div id="risk-vetoed" class="tablewrap"></div></div>
+  </section>
+
+  <section id="tab-paper" class="tab">
+    <div class="card form">
+      <label>Config <input id="paper-config" value="paper-config.json" spellcheck="false"></label>
+      <button id="paper-refresh">Refresh</button>
+      <span class="hint">paper-only · nothing here can trade live</span>
+    </div>
+    <div id="paper-error" class="error"></div>
+    <div id="paper-missing" class="card" hidden>
+      <h3>trade-paper not installed</h3>
+      <p class="hint">pip install git+https://github.com/crieck2010/trade-paper.git</p>
+    </div>
+    <div class="card"><h3>Account</h3><div id="paper-account" class="metrics"></div></div>
+    <div class="card"><h3>Positions</h3><div id="paper-positions" class="tablewrap"></div></div>
+    <div class="card"><h3>Approvals — strategies awaiting you</h3><div id="paper-approvals" class="tablewrap"></div></div>
+    <div class="card"><h3>Recent orders</h3><div id="paper-orders" class="tablewrap"></div></div>
+    <div class="card"><h3>Fidelity — backtest vs paper</h3><div id="paper-fidelity" class="tablewrap"></div></div>
+    <div class="card"><h3>Broker reconcile (demo)</h3>
+      <div class="form"><button id="paper-reconcile-run">Run reconcile</button>
+        <span class="hint">trade-paper · paper ledger vs read-only mock broker · demo only</span></div>
+      <div id="paper-reconcile-error" class="error"></div>
+      <div id="paper-reconcile-metrics" class="metrics"></div>
+      <div id="paper-reconcile-table" class="tablewrap"></div>
+    </div>
+  </section>
+
+  <section id="tab-live" class="tab">
+    <div class="card"><h3>DEMO STREAM — simulated feed</h3>
+      <p class="hint">trade-stream demo session (AAA, BBB, CCC) · polls
+      <code>GET /api/stream/latest</code> every 2s · simulated prices, not real data</p>
+      <div id="live-error" class="error"></div>
+      <div id="live-table" class="tablewrap"></div>
+    </div>
+  </section>
+
+  <section id="tab-data" class="tab">
+    <div class="card form">
+      <label>Symbol <input id="data-symbol" value="SPY"></label>
+      <label>Source <select id="data-source"></select></label>
+      <button id="data-fetch">Fetch bars</button>
+    </div>
+    <div id="data-error" class="error"></div>
+    <div class="card"><h3>Price</h3><div id="data-chart"></div><div id="data-info" class="hint"></div></div>
+  </section>
+
+  <section id="tab-research" class="tab">
+    <nav id="research-tabs" class="subtabs">
+      <button data-rsub="pairs" class="active">Pairs</button>
+      <button data-rsub="orderbook">Order book</button>
+      <button data-rsub="optimize">Optimize</button>
+      <button data-rsub="montecarlo">Monte Carlo</button>
+      <button data-rsub="volsurface">Vol surface</button>
+      <button data-rsub="factors">Factors</button>
+      <button data-rsub="sentiment">Sentiment</button>
+      <button data-rsub="correlation">Correlations</button>
+      <button data-rsub="breadth">Breadth</button>
+      <button data-rsub="macro">Macro</button>
+    </nav>
+
+    <div id="rsub-pairs" class="rsub active">
+      <div class="card form">
+        <label>Symbols (comma-separated) <input id="rs-pairs-symbols" value="SPY, QQQ, IWM, DIA"></label>
+        <label>Source <select id="rs-pairs-source"></select></label>
+        <label>Lookback <input id="rs-pairs-lookback" type="number" value="252"></label>
+        <button id="rs-pairs-run">Screen pairs</button>
+        <span class="hint">trade-pairs · Engle-Granger cointegration</span>
+      </div>
+      <div id="rs-pairs-error" class="error"></div>
+      <div class="card"><h3>Candidates</h3><div id="rs-pairs-table" class="tablewrap"></div></div>
+    </div>
+
+    <div id="rsub-orderbook" class="rsub">
+      <div class="card form">
+        <label>Side <select id="rs-ob-side"><option>buy</option><option>sell</option></select></label>
+        <label>Quantity <input id="rs-ob-qty" type="number" value="100"></label>
+        <label>Type <select id="rs-ob-type"><option>market</option><option>limit</option></select></label>
+        <button id="rs-ob-run">Simulate</button>
+        <span class="hint">trade-orderbook · seeded 5-level book @ 100.00</span>
+      </div>
+      <div id="rs-ob-error" class="error"></div>
+      <div class="card"><h3>Fill quality</h3><div id="rs-ob-metrics" class="metrics"></div></div>
+    </div>
+
+    <div id="rsub-optimize" class="rsub">
+      <div class="card form">
+        <label>Symbols (comma-separated) <input id="rs-opt-symbols" value="SPY, QQQ, IWM"></label>
+        <label>Source <select id="rs-opt-source"></select></label>
+        <label>Method <select id="rs-opt-method"><option>max_sharpe</option><option>min_variance</option><option>risk_parity</option><option>equal_weight</option></select></label>
+        <button id="rs-opt-run">Optimize</button>
+        <span class="hint">trade-optimize · Markowitz, long-only</span>
+      </div>
+      <div id="rs-opt-error" class="error"></div>
+      <div class="card"><h3>Weights</h3><div id="rs-opt-weights" class="metrics"></div></div>
+      <div class="card"><h3>Efficient frontier</h3><div id="rs-opt-chart"></div></div>
+    </div>
+
+    <div id="rsub-montecarlo" class="rsub">
+      <div class="card form">
+        <label>Symbols (comma-separated) <input id="rs-mc-symbols" value="SPY, QQQ"></label>
+        <label>Source <select id="rs-mc-source"></select></label>
+        <label>Paths <input id="rs-mc-paths" type="number" value="2000"></label>
+        <label>Equity <input id="rs-mc-equity" type="number" value="100000"></label>
+        <button id="rs-mc-run">Simulate</button>
+        <span class="hint">trade-montecarlo · correlated GBM VaR</span>
+      </div>
+      <div id="rs-mc-error" class="error"></div>
+      <div class="card"><h3>Risk</h3><div id="rs-mc-metrics" class="metrics"></div></div>
+    </div>
+
+    <div id="rsub-volsurface" class="rsub">
+      <div class="card form">
+        <label>Symbol <input id="rs-vs-symbol" value="SPY"></label>
+        <button id="rs-vs-run">Fit surface</button>
+        <span class="hint">trade-volsurface · SVI fits, demo quotes</span>
+      </div>
+      <div id="rs-vs-error" class="error"></div>
+      <div class="card"><h3>SVI fits by expiry</h3><div id="rs-vs-table" class="tablewrap"></div></div>
+    </div>
+
+    <div id="rsub-factors" class="rsub">
+      <div class="card form">
+        <label>Symbols (comma-separated) <input id="rs-fa-symbols" value="SPY, QQQ"></label>
+        <label>Source <select id="rs-fa-source"></select></label>
+        <label>Model <select id="rs-fa-model"><option>ff5</option><option>ff3</option><option>carhart</option></select></label>
+        <button id="rs-fa-run">Analyze</button>
+        <span class="hint">trade-factors · Fama-French regressions, demo factors</span>
+      </div>
+      <div id="rs-fa-error" class="error"></div>
+      <div class="card"><h3>Verdict</h3><pre id="rs-fa-verdict"></pre></div>
+      <div class="card"><h3>Regressions</h3><div id="rs-fa-table" class="tablewrap"></div></div>
+    </div>
+
+    <div id="rsub-sentiment" class="rsub">
+      <div class="card form">
+        <label>Symbol <input id="rs-se-symbol" value="SPY"></label>
+        <button id="rs-se-run">Analyze</button>
+        <span class="hint">trade-sentiment-vs-price · demo data, 1-day lead planted</span>
+      </div>
+      <div id="rs-se-error" class="error"></div>
+      <div class="card"><h3>Verdict</h3><pre id="rs-se-verdict"></pre></div>
+    </div>
+
+    <div id="rsub-correlation" class="rsub">
+      <div class="card form">
+        <label>Symbols (comma-separated) <input id="rs-co-symbols" value="SPY, QQQ, IWM, DIA"></label>
+        <label>Source <select id="rs-co-source"></select></label>
+        <label>Method <select id="rs-co-method"><option>pearson</option><option>spearman</option></select></label>
+        <label>Shrinkage <select id="rs-co-shrinkage"><option>ledoit_wolf</option><option>sample</option></select></label>
+        <label>Lookback <input id="rs-co-lookback" type="number" value="252"></label>
+        <button id="rs-co-run">Analyze</button>
+        <span class="hint">trade-eda · correlation matrix, shrunk covariance, EDA</span>
+      </div>
+      <div id="rs-co-error" class="error"></div>
+      <div class="card"><h3>Diversification</h3><div id="rs-co-metrics" class="metrics"></div></div>
+      <div class="card"><h3>Correlation matrix</h3><div id="rs-co-matrix" class="tablewrap"></div></div>
+      <div class="card"><h3>Per-asset stats</h3><div id="rs-co-describe" class="tablewrap"></div></div>
+      <div class="card"><h3>Data quality</h3><div id="rs-co-quality" class="tablewrap"></div></div>
+    </div>
+
+    <div id="rsub-breadth" class="rsub">
+      <div class="card form">
+        <label>Preset <select id="rs-br-preset"><option>standard</option><option>strict</option><option>loose</option></select></label>
+        <label>Seed <input id="rs-br-seed" type="number" value="7"></label>
+        <label>Days <input id="rs-br-days" type="number" value="600"></label>
+        <label>Thrust window <input id="rs-br-thrust" type="number" value="10"></label>
+        <button id="rs-br-run">Snapshot</button>
+        <span class="hint">trade-breadth · 60-symbol seeded demo universe</span>
+      </div>
+      <div id="rs-br-error" class="error"></div>
+      <div class="card"><h3>Regime</h3><div id="rs-br-metrics" class="metrics"></div></div>
+      <div class="card"><h3>Fragility</h3><div id="rs-br-fragility"></div></div>
+      <div class="card"><h3>Recent breadth thrusts</h3><div id="rs-br-thrusts" class="tablewrap"></div></div>
+      <div class="card"><h3>Key indicators</h3><div id="rs-br-indicators" class="metrics"></div></div>
+    </div>
+
+    <div id="rsub-macro" class="rsub">
+      <div class="card form">
+        <label>Preset <select id="rs-ma-preset"><option>sensitive</option><option selected>standard</option><option>calm</option></select></label>
+        <label>Seed <input id="rs-ma-seed" type="number" value="42"></label>
+        <label>Days <input id="rs-ma-days" type="number" value="600"></label>
+        <button id="rs-ma-run">Snapshot</button>
+        <span class="hint">trade-macro · copper/gold ratio, synthetic demo series</span>
+      </div>
+      <div id="rs-ma-error" class="error"></div>
+      <div class="card"><h3>Regime</h3><div id="rs-ma-metrics" class="metrics"></div></div>
+    </div>
+  </section>
+
+  <section id="tab-trades" class="tab">
+    <div class="card form">
+      <label>From <input id="tr-from" type="date"></label>
+      <label>To <input id="tr-to" type="date"></label>
+      <label>Symbol <input id="tr-symbol" placeholder="AAPL"></label>
+      <label>Side <select id="tr-side"><option value="">any</option><option>buy</option><option>sell</option></select></label>
+      <label>Strategy <input id="tr-strategy" placeholder="sma_crossover"></label>
+      <label>Agent <input id="tr-agent" placeholder="(strategy/id match)"></label>
+      <label>Outcome <select id="tr-outcome"><option value="">any</option><option>win</option><option>loss</option><option>open</option><option>unknown</option></select></label>
+      <label>Limit <input id="tr-limit" type="number" value="200"></label>
+      <button id="tr-run">Load trades</button>
+      <button id="tr-export">Export CSV</button>
+    </div>
+    <div id="tr-error" class="error"></div>
+    <div id="tr-demo" class="demo-banner" hidden></div>
+    <div class="card"><h3>Blotter <span id="tr-count" class="hint"></span></h3>
+      <div id="tr-table" class="tablewrap"></div>
+      <p class="hint">read-only over the trade-paper audit ledger · outcome from FIFO-matched realized P&amp;L · the ledger has no per-order agent column, so Agent is a substring match on strategy/order id</p>
+    </div>
+  </section>
+
+  <section id="tab-perf" class="tab">
+    <div class="card form">
+      <label>Source <select id="pf-source"><option value="paper">paper</option><option value="backtest">backtest</option></select></label>
+      <label>Ledger path <input id="pf-ledger" placeholder="(auto)" spellcheck="false"></label>
+      <label>Risk-free <input id="pf-rf" type="number" value="0" step="0.01"></label>
+      <button id="pf-run">Analyze</button>
+      <span class="hint">equity snapshots → analytics · falls back to reconstructed realized-P&amp;L curve · backtest needs a result dict pasted via the API</span>
+    </div>
+    <div id="pf-error" class="error"></div>
+    <div id="pf-demo" class="demo-banner" hidden></div>
+    <div class="card"><h3>Summary</h3><div id="pf-summary" class="metrics"></div><div id="pf-note" class="hint"></div></div>
+    <div class="card"><h3>Equity</h3><div id="pf-equity"></div></div>
+    <div class="card"><h3>Underwater (drawdown)</h3><div id="pf-dd"></div></div>
+    <div class="card"><h3>Monthly returns</h3><div id="pf-monthly" class="tablewrap"></div></div>
+    <div class="card"><h3>Rolling Sharpe / vol (63d)</h3><div id="pf-roll"></div></div>
+    <div class="card"><h3>Return histogram</h3><div id="pf-hist"></div></div>
+  </section>
+
+  <section id="tab-agents" class="tab">
+    <div class="card form">
+      <label>Track record <input id="ag-path" placeholder="(auto)" spellcheck="false"></label>
+      <label>Limit <input id="ag-limit" type="number" value="50"></label>
+      <button id="ag-run">Load activity</button>
+      <span class="hint">trade-agents JSONL track record · debates from the paper approvals table</span>
+    </div>
+    <div id="ag-error" class="error"></div>
+    <div class="card"><h3>Leaderboards</h3><div id="ag-boards"></div><div id="ag-note" class="hint"></div></div>
+    <div class="card"><h3>Elo over time</h3><div id="ag-elo"></div>
+      <p class="hint">dashboard-side Elo (K=32, 1500 start, each outcome scored vs a fixed 1500 "market") — a sparkline approximation, not a trade-agents engine number</p></div>
+    <div class="card"><h3>Brier calibration — risk desk</h3><div id="ag-brier"></div>
+      <p class="hint">forecast P(drawdown &gt; threshold) vs realized frequency · diagonal = perfect calibration</p></div>
+    <div class="card"><h3>Debate timeline</h3><div id="ag-debates" class="tablewrap"></div></div>
+    <div class="card"><h3>Approval queue</h3><div id="ag-queue" class="tablewrap"></div></div>
+  </section>
+
+  <section id="tab-network" class="tab">
+    <div class="card form">
+      <label>Symbols (comma-separated) <input id="nw-symbols" placeholder="(blank = demo universe)"></label>
+      <label>Source <select id="nw-source"><option value="demo">demo</option><option value="yfinance">yfinance</option></select></label>
+      <label>Method <select id="nw-method"><option>pearson</option><option>spearman</option></select></label>
+      <label>Days <input id="nw-days" type="number" value="252"></label>
+      <button id="nw-run">Build network</button>
+      <span class="hint">correlation → Kruskal MST (d=√2(1−ρ)) → single-linkage clusters → seeded layout</span>
+    </div>
+    <div id="nw-error" class="error"></div>
+    <div class="card"><h3>Correlation MST <span id="nw-badge" class="hint"></span></h3>
+      <div class="netwrap"><svg id="nw-svg" viewBox="0 0 900 520"></svg><div id="nw-tip" class="tooltip" hidden></div></div>
+      <div id="nw-detail" class="hint">hover a node · drag to pan · scroll to zoom · click a node for detail</div>
+    </div>
+    <div class="card"><h3>Clusters <span class="hint">(single-linkage cut at d=1.0, i.e. ρ&lt;0.5 cut — arbitrary)</span></h3>
+      <div id="nw-clusters" class="tablewrap"></div></div>
+  </section>
+
+  <section id="tab-riskmon" class="tab">
+    <div class="card form">
+      <label>Ledger path <input id="rk-ledger" placeholder="(auto)" spellcheck="false"></label>
+      <label>Hedge state <input id="rk-hedge" placeholder="(auto)" spellcheck="false"></label>
+      <button id="rk-run">Check risk</button>
+      <span class="hint">read-only · exposures from ledger fills (mark = last fill price) · kill-switch from trade-hedge LoopState</span>
+    </div>
+    <div id="rk-error" class="error"></div>
+    <div id="rk-demo" class="demo-banner" hidden></div>
+    <div class="card"><h3>Status</h3><div id="rk-status" class="metrics"></div><div id="rk-kill" style="margin-top:8px"></div></div>
+    <div class="card"><h3>Exposures</h3><div id="rk-exp"></div><div id="rk-extable" class="tablewrap"></div></div>
+    <div class="card"><h3>Vol regime <span class="hint">(trailing 21d annualized realized vol of equity)</span></h3><div id="rk-vol"></div></div>
+    <div class="card"><h3>Conviction gauge</h3><div id="rk-regime"></div></div>
+  </section>
+</main>
+<footer>trade-dashboard-web · research &amp; backtesting only — not investment advice</footer>
+<script src="/static/app.js"></script>
+</body>
+</html>

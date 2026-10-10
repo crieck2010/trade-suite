@@ -1,40 +1,79 @@
 # trade-suite
 
-The meta-package for the **trade-suite** algorithmic and agentic trading
-system: one install for all twenty-four modules, environment introspection,
-end-to-end research workflows, and a unified CLI.
+[![CI](https://github.com/crieck2010/trade-suite/actions/workflows/ci.yml/badge.svg)](https://github.com/crieck2010/trade-suite/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Engines](https://img.shields.io/badge/engines-36%20consolidated-brightgreen.svg)](#the-consolidated-engines)
+[![Tests](https://img.shields.io/badge/tests-438%20passing-success.svg)](https://github.com/crieck2010/trade-suite/actions)
+
+The unified monorepo for the **trade-suite** algorithmic and agentic trading
+system: **36 modular engines**, 438 passing unit/integration tests,
+environment introspection, end-to-end research workflows, and a unified CLI.
 
 > **Research tooling only.** Backtesting, research, and paper-trading
 > software. It does not trade live and it is not investment advice.
 
-## The twenty-four modules
+## The consolidated engines
 
+### Autonomous AI Research & Decisioning
+| Module | Role |
+|---|---|
+| [**trade-agents**](https://github.com/crieck2010/trade-agents) | **Autonomous agentic research desk:** 6 specialist scout agents, debate arbitration, portfolio manager, and risk manager with veto power |
+| [trade-sentiment](https://github.com/crieck2010/trade-sentiment) | Social/news sentiment engine (Reddit, StockTwits, news RSS; feeds `sentiment_scout`) |
+| [trade-sentiment-vs-price](https://github.com/crieck2010/trade-sentiment-vs-price) | Sentiment vs price: lead/lag, event studies, IC, indicators |
+
+### Market Data & Feeds (Zero-Dependency Cores)
 | Module | Role |
 |---|---|
 | [trade-data-equities](https://github.com/crieck2010/trade-data-equities) | Market data: stocks & ETFs (delayed) |
 | [trade-data-options](https://github.com/crieck2010/trade-data-options) | Market data: options chains, pricing, Greeks |
 | [trade-data-futures](https://github.com/crieck2010/trade-data-futures) | Market data: futures contracts & term structure |
 | [trade-data-crypto](https://github.com/crieck2010/trade-data-crypto) | Market data: crypto spot / perpetuals |
-| [trade-backtest](https://github.com/crieck2010/trade-backtest) | Event-driven backtesting engine |
-| [trade-strategies](https://github.com/crieck2010/trade-strategies) | Strategy library (19 strategies, 7 families) |
-| [trade-risk](https://github.com/crieck2010/trade-risk) | Risk limits, sizers, drawdown guards |
-| [trade-agents](https://github.com/crieck2010/trade-agents) | Agentic research desk (scouts → portfolio manager → risk manager) |
-| [trade-paper](https://github.com/crieck2010/trade-paper) | Paper-trading execution engine (Alpaca paper, 3×-daily runner, approval queue) |
-| [trade-sentiment](https://github.com/crieck2010/trade-sentiment) | Social/news sentiment engine (Reddit, StockTwits, news RSS; feeds the agents' `sentiment_scout`) |
-| [trade-pairs](https://github.com/crieck2010/trade-pairs) | Pairs trading: cointegration screen, hedge ratios, signals |
-| [trade-orderbook](https://github.com/crieck2010/trade-orderbook) | Limit-order-book simulator and execution analytics |
-| [trade-optimize](https://github.com/crieck2010/trade-optimize) | Markowitz portfolio optimization and rebalancing |
-| [trade-allocate](https://github.com/crieck2010/trade-allocate) | Strategy allocation: risk parity / HRP across validated strategies |
-| [trade-montecarlo](https://github.com/crieck2010/trade-montecarlo) | Monte Carlo simulation: VaR/CVaR, drawdowns, scenarios |
-| [trade-volsurface](https://github.com/crieck2010/trade-volsurface) | Volatility surfaces: SVI fits, arbitrage checks, local vol |
-| [trade-factors](https://github.com/crieck2010/trade-factors) | Factor analysis: Fama-French regressions, GRS, risk models |
-| [trade-sentiment-vs-price](https://github.com/crieck2010/trade-sentiment-vs-price) | Sentiment vs price: lead/lag, event studies, IC, indicators |
-| [trade-eda](https://github.com/crieck2010/trade-eda) | Correlation/covariance/EDA: Pearson/Spearman matrices, Ledoit-Wolf shrinkage, summary stats, data quality |
-| [trade-breadth](https://github.com/crieck2010/trade-breadth) | Market breadth: advance/decline, thrusts, regime, fragility |
-| [trade-macro](https://github.com/crieck2010/trade-macro) | Macro regime: copper:gold growth-expectations proxy, transition alerts |
 | [trade-stream](https://github.com/crieck2010/trade-stream) | Real-time streaming: WebSocket transport, pub/sub bus, tick recording and replay |
-| [trade-dashboard-web](https://github.com/crieck2010/trade-dashboard-web) | Web dashboard |
-| [trade-dashboard-desktop](https://github.com/crieck2010/trade-dashboard-desktop) | Desktop dashboard (tkinter) |
+
+### Quantitative Research, Validation & Overfit Defense
+| Module | Role |
+|---|---|
+| [trade-backtest](https://github.com/crieck2010/trade-backtest) | Event-driven backtesting engine (FIFO, slippage models, performance attribution) |
+| [trade-strategies](https://github.com/crieck2010/trade-strategies) | Strategy library (19 strategies, 7 families) |
+| [trade-swing](https://github.com/crieck2010/trade-swing) | Reference swing-trend strategy with full validation loop |
+| [trade-pairs](https://github.com/crieck2010/trade-pairs) | Pairs trading: cointegration screen, hedge ratios, signals |
+| [trade-factors](https://github.com/crieck2010/trade-factors) | Factor analysis: Fama-French regressions, GRS test, risk models |
+| [trade-eda](https://github.com/crieck2010/trade-eda) | Correlation/covariance/EDA: Pearson/Spearman, Ledoit-Wolf shrinkage |
+| [trade-screener](https://github.com/crieck2010/trade-screener) | Multi-symbol equity screener with technical/fundamental filters and z-score ranking |
+| [trade-overfit](https://github.com/crieck2010/trade-overfit) | Overfitting detection: Deflated Sharpe Ratio, CSCV, Bailey-de Prado |
+| [trade-multitest](https://github.com/crieck2010/trade-multitest) | Multiple hypothesis testing: White's Reality Check, Hansen's SPA |
+| [trade-montecarlo](https://github.com/crieck2010/trade-montecarlo) | Monte Carlo simulation: VaR/CVaR, drawdowns, scenario stress testing |
+| [trade-volsurface](https://github.com/crieck2010/trade-volsurface) | Volatility surfaces: SVI fits, arbitrage checks, local vol |
+| [trade-volforecast](https://github.com/crieck2010/trade-volforecast) | Volatility forecasting: realized estimators, EWMA, GARCH/GJR-GARCH, HAR-RV |
+| [trade-orderbook](https://github.com/crieck2010/trade-orderbook) | Limit-order-book simulator and execution analytics |
+
+### Portfolio Construction, Sizing & Allocation
+| Module | Role |
+|---|---|
+| [trade-optimize](https://github.com/crieck2010/trade-optimize) | Markowitz mean-variance portfolio optimization and rebalancing |
+| [trade-allocate](https://github.com/crieck2010/trade-allocate) | Strategy allocation: risk parity / HRP across validated strategies |
+| [trade-risk](https://github.com/crieck2010/trade-risk) | Risk limits, position sizers, drawdown guards |
+| [trade-hedge](https://github.com/crieck2010/trade-hedge) | Portfolio hedging engine and automated kill-switch |
+| [trade-mandate](https://github.com/crieck2010/trade-mandate) | Investment mandate and constraint enforcement |
+
+### Macro, Regimes & Live Lifecycle Management
+| Module | Role |
+|---|---|
+| [trade-macro](https://github.com/crieck2010/trade-macro) | Macro regime: copper:gold growth proxy, transition alerts |
+| [trade-breadth](https://github.com/crieck2010/trade-breadth) | Market breadth: advance/decline, McClellan, breadth thrusts, fragility |
+| [trade-regime](https://github.com/crieck2010/trade-regime) | Market regime classification and volatility switch detection |
+| [trade-drift](https://github.com/crieck2010/trade-drift) | Concept and data drift detection for live feeds |
+| [trade-decay](https://github.com/crieck2010/trade-decay) | Live-strategy decay monitoring: trailing performance vs validation expectations |
+| [trade-incubate](https://github.com/crieck2010/trade-incubate) | Strategy incubation pipeline and paper validation tracking |
+| [trade-lifecycle](https://github.com/crieck2010/trade-lifecycle) | End-to-end strategy lifecycle management (ideation to retirement) |
+| [trade-paper](https://github.com/crieck2010/trade-paper) | Paper-trading execution engine (Alpaca paper, 3×-daily runner, approval queue) |
+
+### Dashboards & User Interfaces
+| Module | Role |
+|---|---|
+| [trade-dashboard-web](https://github.com/crieck2010/trade-dashboard-web) | Web dashboard (shared engine services, HTML/JS frontend) |
+| [trade-dashboard-desktop](https://github.com/crieck2010/trade-dashboard-desktop) | Dependency-free desktop dashboard (Tkinter) |
 
 Design principles across the suite: pure-logic engines with no UI imports,
 stdlib-only cores, lazy cross-module adapters, deterministic demo data so
