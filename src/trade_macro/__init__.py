@@ -19,6 +19,7 @@ from .adapters import (
     risk_regime_input,
     series_from_trade_data_equities,
     series_from_trade_data_futures,
+    weather_input,
 )
 from .demo import demo_series, run_demo
 from .flow_context import (
@@ -53,12 +54,14 @@ from .skip_days import (
     is_skip_day,
 )
 from .snapshot import SCHEMA_VERSION, snapshot, snapshot_history
+from .weather import WEATHER_RULES, WeatherReport, trading_weather
 
 __version__ = "0.2.0"
 
 __all__ = [
     "__version__",
     "SCHEMA_VERSION",
+    "WEATHER_RULES",
     "BuybackContext",
     "CONTRACTION",
     "EXPANSION",
@@ -71,6 +74,7 @@ __all__ = [
     "SOURCE_NOTES",
     "SkipCalendar",
     "SkipDay",
+    "WeatherReport",
     "align_series",
     "buyback_blackout",
     "classify_regime",
@@ -95,5 +99,7 @@ __all__ = [
     "series_from_trade_data_futures",
     "snapshot",
     "snapshot_history",
+    "trading_weather",
     "validate_series",
+    "weather_input",
 ]

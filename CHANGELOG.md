@@ -26,6 +26,26 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 - 14 new tests (`tests/test_macro_skip_days.py`): known FOMC dates,
   third-Friday OpEx incl. year boundary, month-end with/without session
   input, Wednesday/Friday discrepancy, multi-reason ordering.
+- `trade_macro.weather`: trading-weather composite barometer — one
+  categorical readout (calm | caution | storm) plus a 0-100 score for the
+  bet-sizing layer, built ONLY from existing validated inputs (copper:gold
+  regime label, buyback-blackout read, forced-selling read). Rule-based
+  with documented, conventional (never fitted) component points:
+  forced_selling.elevated -> storm (50); CONTRACTION + deep blackout ->
+  storm (20+20); any single flag -> caution; otherwise calm.
+  - `trading_weather(as_of, *, regime, buyback, forced_selling,
+    em_state=None) -> WeatherReport`: frozen dataclass with category,
+    score, human-readable reasons, and traceable input echo; `em_state`
+    accepted-and-ignored slot for a future EM term-structure input.
+    Strict as-of-date agreement across inputs (no-look-ahead discipline).
+  - `adapters.weather_input(report) -> {"weather": {...}}` for the agents'
+    `market_context` merge, following existing adapter conventions.
+  - Usage contract: sizing context ONLY, never an entry signal; no fitted
+    weights (any weighting proposal requires pre-registration first).
+- 21 new tests (`tests/test_macro_weather.py`): each rule in isolation,
+  rule combinations, score-mapping boundaries, em_state ignored,
+  as-of mismatch / bad regime / wrong-type errors, adapter shape,
+  report validation.
 
 ## [0.7.0] - 2026-09-26
 

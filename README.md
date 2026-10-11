@@ -60,7 +60,7 @@ environment introspection, end-to-end research workflows, and a unified CLI.
 ### Macro, Regimes & Live Lifecycle Management
 | Module | Role |
 |---|---|
-| [trade-macro](https://github.com/crieck2010/trade-macro) | Macro regime: copper:gold growth proxy, transition alerts |
+| [trade-macro](https://github.com/crieck2010/trade-macro) | Macro regime: copper:gold growth proxy, transition alerts, flow-context flags (buyback blackouts, forced-selling risk), skip-day conditioning, trading-weather barometer |
 | [trade-breadth](https://github.com/crieck2010/trade-breadth) | Market breadth: advance/decline, McClellan, breadth thrusts, fragility |
 | [trade-regime](https://github.com/crieck2010/trade-regime) | Market regime classification and volatility switch detection |
 | [trade-drift](https://github.com/crieck2010/trade-drift) | Concept and data drift detection for live feeds |

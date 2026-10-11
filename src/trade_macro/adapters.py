@@ -181,3 +181,21 @@ def flow_context_input(
     return {"flow_context": flow_context(series, as_of=as_of,
                                          blackout_ranges=blackout_ranges
                                          ).to_dict()}
+
+
+def weather_input(report) -> dict:
+    """Trading-weather digest for trade-agents' ``market_context`` merge.
+
+    Pure function of a :class:`trade_macro.weather.WeatherReport` — returns
+    ``{"weather": {...}}`` with the category, 0-100 score, fired reasons,
+    and traceable inputs.  Sizing context (the "when"/"how much"), never an
+    entry signal: the graded-conviction decision layer consumes it alongside
+    the copper:gold regime and the flow-context flags.
+    """
+    from .weather import WeatherReport
+    if not isinstance(report, WeatherReport):
+        raise TypeError(
+            "weather_input expects a WeatherReport, "
+            f"got {type(report).__name__}"
+        )
+    return {"weather": report.to_dict()}
