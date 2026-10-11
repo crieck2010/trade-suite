@@ -88,6 +88,24 @@ src/trade_dashboard_app/
 - Registered console script `trade-dashboard-app = "trade_dashboard_app.__main__:main"` in `pyproject.toml`.
 - Documented all features under `## [Unreleased]` in `CHANGELOG.md` following Keep a Changelog and SemVer.
 
+### E. Tab 6: 0DTE Options & Volatility Surface (EM-Decay Monitor)
+- Built `src/trade_dashboard_app/services/options_service.py`:
+  - Directly wires `trade_data_options.em_decay` for the 83.0% hypothesis threshold.
+  - Directly wires `trade_macro.skip_days` for FOMC, OpEx, and Month-End tail-risk conditioning.
+  - Implements real-time variance risk premium spread ($IV_{0DTE} - RV$) and $VIX/VIX3M$ Contango/Backwardation ratio.
+  - Encapsulates pre-registered 0DTE Iron-Fly parameters (ATM short straddle, 50-wide long wings, multiples of 5 rule, $\le 30\%$ account risk cap).
+- Built `src/trade_dashboard_app/tabs/tab6_options_surface.py`:
+  - Interactive quote input calibration expander for real-time sensitivity testing.
+  - Dynamic progress bar tracking remaining expected move premium.
+  - Calendar conditioning cards with explicit event alerts.
+  - Pre-registered iron-fly specification table.
+- Added comprehensive unit tests in `tests/test_dashboard_app.py` (`test_options_service_em_decay`):
+  - Verified triggered (<= 83%) vs. waiting (> 83%) threshold logic.
+  - Verified scheduled FOMC date filtering (`date(2026, 10, 28)` correctly skipped).
+  - Verified wing geometry and multiples-of-5 contract sizing.
+- **Test Results:** 6/6 dashboard tests + 55 options/macro tests (61/61 total) passed cleanly.
+
+
 ---
 
 ## 4. How to Launch and Verify the Dashboard

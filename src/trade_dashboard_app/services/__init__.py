@@ -35,6 +35,16 @@ from .risk_service import (
     trigger_kill_switch,
 )
 from .execution_service import get_order_blotter, get_validation_telemetry
+from .options_service import (
+    EMDecayStatus,
+    IronFlySetup,
+    SkipDayStatus,
+    VolSurfaceSpread,
+    get_em_decay_status,
+    get_iron_fly_setup,
+    get_skip_day_status,
+    get_vol_surface_spread,
+)
 
 __all__ = [
     "PortfolioMetrics",
@@ -47,6 +57,10 @@ __all__ = [
     "PendingProposal",
     "RiskStatus",
     "HardwareInferenceMetrics",
+    "EMDecayStatus",
+    "SkipDayStatus",
+    "VolSurfaceSpread",
+    "IronFlySetup",
     "record_audit_event",
     "read_audit_log",
     "get_portfolio_metrics",
@@ -66,4 +80,8 @@ __all__ = [
     "get_hedge_loop_status",
     "get_order_blotter",
     "get_validation_telemetry",
+    "get_em_decay_status",
+    "get_skip_day_status",
+    "get_vol_surface_spread",
+    "get_iron_fly_setup",
 ]

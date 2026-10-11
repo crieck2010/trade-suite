@@ -137,3 +137,52 @@ def test_execution_service_blotter_and_telemetry():
     assert telem["deflated_sharpe_ratio"] == 1.000
     assert telem["dsr_verdict"] == "PASS"
     assert telem["oos_median_sharpe"] == 1.385
+
+
+def test_options_service_em_decay():
+    from trade_dashboard_app.services import (
+        EMDecayStatus,
+        get_em_decay_status,
+        get_iron_fly_setup,
+        get_skip_day_status,
+        get_vol_surface_spread,
+    )
+    from datetime import date
+
+    # Test triggered decay (82.06% <= 83.0%)
+    status_triggered = get_em_decay_status(opening_em=48.50, call_mid=19.80, put_mid=20.00)
+    assert isinstance(status_triggered, EMDecayStatus)
+    assert status_triggered.decay_pct <= 83.0
+    assert status_triggered.triggered is True
+    assert "TRIGGERED" in status_triggered.trigger_message
+
+    # Test untriggered decay (90.72% > 83.0%)
+    status_waiting = get_em_decay_status(opening_em=48.50, call_mid=22.00, put_mid=22.00)
+    assert status_waiting.decay_pct > 83.0
+    assert status_waiting.triggered is False
+    assert "WAITING" in status_waiting.trigger_message
+
+    # Test skip-day conditioning
+    skip_clean = get_skip_day_status(target_date=date(2026, 10, 11))
+    assert isinstance(skip_clean.reasons, list)
+
+    # Known scheduled FOMC announcement date
+    skip_fomc = get_skip_day_status(target_date=date(2026, 10, 28))
+    assert skip_fomc.is_skip_day is True
+    assert skip_fomc.fomc_active is True
+    assert "fomc" in skip_fomc.reasons
+
+    # Test Volatility Surface Spread & VIX Term Structure
+    vol = get_vol_surface_spread()
+    assert vol.iv_rv_spread > 0  # Rich IV
+    assert vol.vix_ratio < 1.0   # Contango
+    assert "Contango" in vol.term_structure
+
+    # Test Iron-Fly Structure
+    fly = get_iron_fly_setup(strike=5800.0)
+    assert fly.atm_strike == 5800.0
+    assert fly.call_long == 5850.0
+    assert fly.put_long == 5750.0
+    assert fly.recommended_lots % 5 == 0  # Multiples of 5 rule
+    assert fly.max_risk_per_spread > 0
+

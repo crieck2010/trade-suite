@@ -34,14 +34,23 @@ and versioning follows [Semantic Versioning](https://semver.org/).
     Switch halting order execution, human-in-the-loop proposal staging with
     approval/rejection audit trail, hyper-gamma 0DTE threshold alerts, and
     trade_hedge auto-hedging loop status.
+  - **Tab 6: 0DTE Options & Volatility Surface (`tab6_options_surface.py`)**:
+    Real-time Expected Move (EM) decay monitor integrating
+    `trade_data_options.em_decay` against the pre-registered 83.0% entry
+    threshold; tail-risk calendar conditioning gate (`trade_macro.skip_days`)
+    tracking FOMC decisions, monthly OpEx, and month-end flows; pre-registered
+    0DTE Iron-Fly strike and wing geometry (`50 -> 20` schedule, multiples of 5,
+    $\le 30\%$ account risk cap); and variance risk premium spread ($IV_{0DTE} - RV$)
+    with VIX / VIX3M term structure contango/backwardation curve.
   - **Master Audit Logging (`audit_service.py`)**: Thread-safe, atomic
     append-only audit log (`audit_log.json`) recording all manual overrides.
   - **Strict Engine/UI Separation**: Zero trading logic or raw calculations in
     UI components; pure presentation delegating to typed service layer with
     fail-soft fallback handlers when engines or offline.
   - Packaging-ready for PyInstaller + pywebview Windows `.exe` desktop wrapping.
-  - 5 comprehensive unit tests (`tests/test_dashboard_app.py`) covering all
-    services, data contracts, atomic audit logging, and risk controls.
+  - 6 comprehensive unit tests (`tests/test_dashboard_app.py`) covering all
+    services, data contracts, atomic audit logging, 0DTE EM decay, skip days,
+    and risk controls.
   - Registered console script `trade-dashboard-app` in `pyproject.toml`.
 - `trade_data_options.providers.ThetaDataOptionsProvider`: EOD options
   chains via a local ThetaData Terminal (v3) — stdlib `urllib` only, zero
