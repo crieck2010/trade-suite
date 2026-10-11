@@ -7,6 +7,21 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `trade_data_options.providers.ThetaDataOptionsProvider`: EOD options
+  chains via a local ThetaData Terminal (v3) — stdlib `urllib` only, zero
+  new dependencies, no credentials in code (the terminal authenticates
+  itself). Implements the `OptionsDataProvider` ABC (`get_expiries`,
+  `get_chain`, `get_underlying_price`) against the documented v3
+  endpoints (`/v3/option/list/expirations`,
+  `/v3/option/history/eod`, `/v3/stock/history/eod`); configurable
+  `base_url`, client-side rate-limit guard (default 25/min, conservative
+  under the free tier's 30), clear errors when the terminal is down
+  (never silent empty chains), European style for index underlyings
+  (SPX/SPXW/NDX/RUT/XSP). Module docstring documents free-tier
+  capabilities (EOD chains from 2023-06-01, 1-day delay) vs paid-tier
+  needs (intraday bars). 15 new tests
+  (`tests/test_data_options_thetadata.py`), all fixture-based (no
+  network). README "ThetaData options data" setup section.
 - `trade_data_options.em_decay`: EM-decay entry trigger — a pure-stdlib
   timing filter on premium decay (current ATM straddle as a fraction of the
   opening EM). `em_decay()`, `em_decay_from_expected_move()` (takes an

@@ -98,6 +98,46 @@ On Linux, the desktop dashboard needs tkinter: `sudo apt install python3-tk`
 (or the equivalent for your distro). It ships with standard CPython on
 Windows and macOS.
 
+## ThetaData options data (free EOD tier)
+
+`trade_data_options` can read EOD options chains from a local ThetaData
+Terminal (v3) via `ThetaDataOptionsProvider` — stdlib only, no new
+dependencies, and **no credentials in code**: the terminal authenticates
+itself; our code only talks to its local API at
+`http://127.0.0.1:25503`.
+
+Setup (once, by the human):
+
+1. Install Java 21+: `apt install openjdk-21-jre` (Ubuntu).
+2. Download `ThetaTerminalv3.jar` from ThetaData; generate an API key
+   (`td1_...`) at thetadata.net.
+3. Launch: `java -jar ThetaTerminalv3.jar --api-key td1_...`
+   (or the `THETADATA_API_KEY` env var / `.env` file). Wait for
+   `Starting server at: http://0.0.0.0:25503/`.
+4. Verify: `curl
+   "http://127.0.0.1:25503/v3/option/list/expirations?symbol=SPX&format=json"`
+
+Free-tier capabilities (per ThetaData's Subscriptions doc): **EOD**
+options chains — bid/ask, volume, Greeks — from **2023-06-01**, ~30
+req/min (the provider throttles client-side at 25/min by default), 1-day
+delay. Enough for real-spread EOD backtests and for validating the EM
+calculator on real chains. Intraday/minute-bar quote endpoints need a
+paid tier (VALUE+) — anything requiring intraday straddle decay (e.g.
+the 0DTE EM-decay trigger) still waits on that.
+
+```python
+from trade_data_options.providers import ThetaDataOptionsProvider
+from trade_data_options.expected_move import expected_move_for_expiry
+from datetime import date
+
+provider = ThetaDataOptionsProvider()  # terminal must be running
+em = expected_move_for_expiry(provider, "SPX", date(2026, 10, 16))
+print(em.em_points, em.em_pct)  # real EOD straddle, not delayed yfinance
+```
+
+If the terminal isn't running, the provider raises a clear error telling
+you to start it — it never silently returns empty chains.
+
 ## Quickstart
 
 ```bash
