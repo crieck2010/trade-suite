@@ -46,6 +46,12 @@ from .regime import (
     detect_transitions,
 )
 from .series import SOURCE_NOTES, align_series, validate_series
+from .skip_days import (
+    SkipCalendar,
+    SkipDay,
+    default_skip_calendar,
+    is_skip_day,
+)
 from .snapshot import SCHEMA_VERSION, snapshot, snapshot_history
 
 __version__ = "0.2.0"
@@ -63,9 +69,12 @@ __all__ = [
     "PRESETS",
     "REGIMES",
     "SOURCE_NOTES",
+    "SkipCalendar",
+    "SkipDay",
     "align_series",
     "buyback_blackout",
     "classify_regime",
+    "default_skip_calendar",
     "demo_series",
     "detect_transitions",
     "enrich_ratios",
@@ -75,6 +84,7 @@ __all__ = [
     "forced_selling_risk",
     "get_indicator",
     "hedge_tilt_input",
+    "is_skip_day",
     "list_indicators",
     "market_context_provider",
     "ratio_series",

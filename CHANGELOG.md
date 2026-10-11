@@ -4,6 +4,29 @@ All notable changes to `trade-suite` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and versioning follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- `trade_macro.skip_days`: skip-day conditioning — tail-risk-day research
+  filter for short-premium work (FOMC announcement days, monthly
+  options-expiration days, month-end). Pure stdlib calendar read, no data,
+  no look-ahead, no fitted parameters.
+  - `SkipCalendar` (frozen): shipped static FOMC announcement list (23
+    dates covering 2025/2026/announced-2027; quarterly refresh cadence
+    documented; the field is the adapter slot for a future Fed-calendar
+    feed); `opex_rule="third_friday"` default with the source video's
+    third-Wednesday claim kept configurable (discrepancy recorded in the
+    docstring); `month_end=True`.
+  - `is_skip_day(d, calendar, trading_days=None) -> SkipDay`: month-end
+    pins to real sessions when a session set is supplied, else calendar
+    month-end (documented approximation). Returns `skipped`, ordered
+    `reasons`, and a human-readable reason.
+  - Usage contract: research filter for conditioning backtests ONLY —
+    not wired into any live runner or strategy.
+- 14 new tests (`tests/test_macro_skip_days.py`): known FOMC dates,
+  third-Friday OpEx incl. year boundary, month-end with/without session
+  input, Wednesday/Friday discrepancy, multi-reason ordering.
+
 ## [0.7.0] - 2026-09-26
 
 ### Added
