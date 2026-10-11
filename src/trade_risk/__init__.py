@@ -34,6 +34,13 @@ from .base import (
 )
 from .manager import RiskManager
 from .trailing import TrailingStop, atr_wilder, true_range
+from .premium import (
+    PremiumRiskProfile,
+    credit_stop,
+    defined_risk_max_loss,
+    premium_profile,
+    premium_size,
+)
 
 __version__ = "0.2.0"
 __all__ = [
@@ -48,5 +55,10 @@ __all__ = [
     "TrailingStop",
     "atr_wilder",
     "true_range",
+    "PremiumRiskProfile",
+    "credit_stop",
+    "defined_risk_max_loss",
+    "premium_profile",
+    "premium_size",
     "__version__",
 ]
