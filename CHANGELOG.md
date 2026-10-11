@@ -7,6 +7,42 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `trade_dashboard_app`: Streamlit-first Broker-Grade Agentic Trading Dashboard
+  (v1.1.0). Implements the command center architecture specified in
+  `Trading_Dashboard_Architecture_Spec_v1.1.0.md` and
+  `Dashboard_Features_Specification.md`:
+  - **Zero-Scroll Hero Metrics Bar**: Real-time Net Liquidity, Day P&L,
+    YTD P&L, Buying Power with margin utilization, Beta-Weighted Delta (SPY),
+    and VIX level.
+  - **Tab 1: Global Macro & P&L**: Macro regime indicator (copper:gold ratio,
+    z-score, MA200 trend, Benner Cycle phase), Levenson framework asset
+    allocation (Real Assets vs. Equities vs. Cash), active positions grid
+    strictly formatted for 100-share round lots and spread legs with live Greeks.
+  - **Tab 2: Agent Visualizer (The Orchestrator's Brain)**: Live LangGraph
+    cyclic state DAG topology (Mattermost Ingest -> Node A Orchestrator ->
+    Node B Dispatcher -> Node C Worker Pool -> Node D Review), BusinessState
+    dictionary inspector, live debate transcript stream (trade_agents v0.2.0),
+    agent reputation leaderboard (realized OOS Sharpe with clawback decay),
+    and local hardware inference metrics (M3 Ultra 512GB, VRAM context cache,
+    tokens/sec).
+  - **Tab 3: Master Execution Blotter**: Order audit blotter with algorithmic
+    rationale tracking and expected vs. actual fill slippage fidelity checks.
+  - **Tab 4: Strategy & Walk-Forward Validation**: Deflated Sharpe Ratio
+    (DSR) validation telemetry (Bailey & de Prado), 13-fold walk-forward
+    consistency matrix, and Tier-1 pre-registration gate accounting.
+  - **Tab 5: Risk Controls & The "E-Stop"**: Physical-style emergency Kill
+    Switch halting order execution, human-in-the-loop proposal staging with
+    approval/rejection audit trail, hyper-gamma 0DTE threshold alerts, and
+    trade_hedge auto-hedging loop status.
+  - **Master Audit Logging (`audit_service.py`)**: Thread-safe, atomic
+    append-only audit log (`audit_log.json`) recording all manual overrides.
+  - **Strict Engine/UI Separation**: Zero trading logic or raw calculations in
+    UI components; pure presentation delegating to typed service layer with
+    fail-soft fallback handlers when engines or offline.
+  - Packaging-ready for PyInstaller + pywebview Windows `.exe` desktop wrapping.
+  - 5 comprehensive unit tests (`tests/test_dashboard_app.py`) covering all
+    services, data contracts, atomic audit logging, and risk controls.
+  - Registered console script `trade-dashboard-app` in `pyproject.toml`.
 - `trade_data_options.providers.ThetaDataOptionsProvider`: EOD options
   chains via a local ThetaData Terminal (v3) — stdlib `urllib` only, zero
   new dependencies, no credentials in code (the terminal authenticates
