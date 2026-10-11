@@ -232,3 +232,62 @@ def test_stress_service_evaluations():
     assert curve[-1]["SPX Move (%)"] == 5.0
 
 
+def test_field_service_and_telemetry():
+    from trade_dashboard_app.services import (
+        FieldTelemetry,
+        execute_field_emergency_action,
+        get_field_telemetry,
+        get_risk_status,
+        read_audit_log,
+        reset_kill_switch,
+    )
+    from trade_dashboard_app.tabs import render_tab8
+
+    # Ensure clean starting state
+    reset_kill_switch(actor="Test Runner")
+
+    telemetry = get_field_telemetry()
+    assert isinstance(telemetry, FieldTelemetry)
+    assert telemetry.net_liquidity > 0
+    assert telemetry.vix > 0
+    assert telemetry.tailscale_ip == "100.82.140.22"
+    assert telemetry.tailscale_latency_ms == 24
+    assert telemetry.system_health in ["NOMINAL", "ELEVATED_RISK", "CRITICAL_BREACH"]
+    assert isinstance(telemetry.alerts, list)
+
+    # Test 1-Tap Emergency E-Stop
+    res_estop = execute_field_emergency_action("FULL_E_STOP", actor="Test Operator")
+    assert res_estop["status"] == "SUCCESS"
+    assert get_risk_status().kill_switch_active is True
+
+    # Telemetry should now report critical breach with kill switch alert
+    telemetry_breach = get_field_telemetry()
+    assert telemetry_breach.system_health == "CRITICAL_BREACH"
+    assert any("KILL SWITCH" in a.title for a in telemetry_breach.alerts)
+
+    # Test Reset E-Stop
+    res_reset = execute_field_emergency_action("RESET_E_STOP", actor="Test Operator")
+    assert res_reset["status"] == "SUCCESS"
+    assert get_risk_status().kill_switch_active is False
+
+    # Test 1-Tap Flatten 0DTE Wings
+    res_flatten = execute_field_emergency_action("FLATTEN_0DTE_WINGS", actor="Test Operator")
+    assert res_flatten["status"] == "SUCCESS"
+
+    # Test 1-Tap Hedge Delta Neutral
+    res_hedge = execute_field_emergency_action("HEDGE_DELTA_NEUTRAL", actor="Test Operator")
+    assert res_hedge["status"] == "SUCCESS"
+
+    # Verify audit log recorded events
+    recent_audits = read_audit_log(limit=10)
+    audit_actions = [e.get("action") for e in recent_audits]
+    assert "KILL_SWITCH_ACTIVATED" in audit_actions
+    assert "KILL_SWITCH_RESET" in audit_actions
+    assert "FIELD_FLATTEN_0DTE_WINGS" in audit_actions
+    assert "FIELD_HEDGE_DELTA_NEUTRAL" in audit_actions
+
+    # Verify tab8 callable
+    assert callable(render_tab8)
+
+
+

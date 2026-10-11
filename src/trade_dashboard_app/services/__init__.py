@@ -52,6 +52,12 @@ from .stress_service import (
     evaluate_portfolio_shock,
     generate_gamma_curve_points,
 )
+from .field_service import (
+    FieldAlert,
+    FieldTelemetry,
+    execute_field_emergency_action,
+    get_field_telemetry,
+)
 
 __all__ = [
     "PortfolioMetrics",
@@ -71,6 +77,8 @@ __all__ = [
     "ScenarioPreset",
     "ShockResult",
     "HISTORICAL_PRESETS",
+    "FieldAlert",
+    "FieldTelemetry",
     "record_audit_event",
     "read_audit_log",
     "get_portfolio_metrics",
@@ -96,5 +104,7 @@ __all__ = [
     "get_iron_fly_setup",
     "evaluate_portfolio_shock",
     "generate_gamma_curve_points",
+    "get_field_telemetry",
+    "execute_field_emergency_action",
 ]
 

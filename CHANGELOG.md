@@ -8,7 +8,7 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 - `trade_dashboard_app`: Streamlit-first Broker-Grade Agentic Trading Dashboard
-  (v1.1.0). Implements the command center architecture specified in
+  (v1.2.0). Implements the command center architecture specified in
   `Trading_Dashboard_Architecture_Spec_v1.1.0.md` and
   `Dashboard_Features_Specification.md`:
   - **Zero-Scroll Hero Metrics Bar**: Real-time Net Liquidity, Day P&L,
@@ -50,14 +50,24 @@ and versioning follows [Semantic Versioning](https://semver.org/).
     automated hedge generation via `trade_hedge` rules (`delta_trim_rule`) with
     one-click staging to desk; and historical stress presets (2020 COVID Crash,
     2022 Correlated Bond-Equity Crash, 0DTE Gamma Squeeze, Melt-Up).
+  - **Tab 8: Field Quick-View Mode (`tab8_field_mode.py`, `field_service.py`)**:
+    Mobile-optimized, direct-sunlight high-contrast console for field operators
+    surveying desks via secure Tailscale VPN mesh tunnel (`100.82.140.22`, ~24ms latency);
+    single-screen glanceable telemetry cards (Net Liquidity, Day P&L, VIX, Macro Regime,
+    System Health Verdict); audio/visual breach banners with Web Audio API siren
+    for 0DTE hyper-gamma and emergency kill switch violations; thumb-friendly,
+    high-surface touch controls for 1-tap E-Stop (`FULL_E_STOP`, `FLATTEN_0DTE_WINGS`,
+    `HEDGE_DELTA_NEUTRAL`, `RESET_E_STOP`); and rapid human-in-the-loop trade proposal
+    approval/rejection gates with full audit trail logging.
   - **Master Audit Logging (`audit_service.py`)**: Thread-safe, atomic
     append-only audit log (`audit_log.json`) recording all manual overrides.
   - **Strict Engine/UI Separation**: Zero trading logic or raw calculations in
     UI components; pure presentation delegating to typed service layer with
-    fail-soft fallback handlers when engines or offline.
+    fail-soft fallback handlers when engines are offline.
   - Packaging-ready for PyInstaller + pywebview Windows `.exe` desktop wrapping.
-  - 7 comprehensive unit tests (`tests/test_dashboard_app.py`) covering all
+  - 8 comprehensive unit tests (`tests/test_dashboard_app.py`) covering all
     services, data contracts, atomic audit logging, 0DTE EM decay, skip days,
+    vol surface, portfolio stress simulations, and field telemetry/emergency actions.
     stress testing, and risk controls.
   - Registered console script `trade-dashboard-app` in `pyproject.toml`.
 - `trade_data_options.providers.ThetaDataOptionsProvider`: EOD options
