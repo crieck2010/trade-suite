@@ -42,8 +42,11 @@ from .options_service import (
     VolSurfaceSpread,
     get_em_decay_status,
     get_iron_fly_setup,
+    get_live_stream_telemetry,
     get_skip_day_status,
+    get_streaming_pipeline,
     get_vol_surface_spread,
+    simulate_stream_tick,
 )
 from .stress_service import (
     HISTORICAL_PRESETS,
@@ -102,6 +105,9 @@ __all__ = [
     "get_skip_day_status",
     "get_vol_surface_spread",
     "get_iron_fly_setup",
+    "get_streaming_pipeline",
+    "get_live_stream_telemetry",
+    "simulate_stream_tick",
     "evaluate_portfolio_shock",
     "generate_gamma_curve_points",
     "get_field_telemetry",

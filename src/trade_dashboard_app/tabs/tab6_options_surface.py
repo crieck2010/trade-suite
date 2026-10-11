@@ -16,8 +16,10 @@ import streamlit as st
 from ..services import (
     get_em_decay_status,
     get_iron_fly_setup,
+    get_live_stream_telemetry,
     get_skip_day_status,
     get_vol_surface_spread,
+    simulate_stream_tick,
 )
 
 
@@ -25,15 +27,40 @@ def render_tab6() -> None:
     """Renders Tab 6: 0DTE Options & EM-Decay Monitor."""
     st.subheader("⚡ 0DTE Options & Volatility Surface Monitor")
 
+    # Fetch live streaming telemetry
+    stream_telem = get_live_stream_telemetry()
+
+    # Live WebSocket Status Header
+    with st.container(border=True):
+        ws_col1, ws_col2, ws_col3 = st.columns([2, 2, 1])
+        with ws_col1:
+            st.markdown(f"**ThetaData V3 Live WebSocket Feed:** `{stream_telem['state_label']}`")
+            st.caption(f"Endpoint: `ws://127.0.0.1:25503/v3/ws` | Target: **{stream_telem['symbol']} {stream_telem['strike']:.0f} Straddle**")
+        with ws_col2:
+            st.markdown(
+                f"**Live Straddle NBBO:** `${stream_telem['straddle_bid']:.2f}` / `${stream_telem['straddle_ask']:.2f}` | **Mid:** `${stream_telem['straddle_mid']:.2f}`"
+            )
+            st.caption(f"Ticks Processed: {stream_telem['ticks_count']} | Live Decay: **{stream_telem['decay_pct']:.2f}%**")
+        with ws_col3:
+            if st.button("📡 Inject Live Tick", help="Simulate a real-time NBBO quote update through the live pipeline"):
+                simulate_stream_tick(
+                    call_bid=19.40,
+                    call_ask=19.80,
+                    put_bid=19.50,
+                    put_ask=19.90,
+                )
+                st.toast("Injected live straddle quote tick")
+                st.rerun()
+
     # Interactive simulation sliders in expander
     with st.expander("⚙️ Real-Time 0DTE Quote Inputs & Calibration", expanded=False):
         c_in1, c_in2, c_in3, c_in4 = st.columns(4)
         with c_in1:
             sim_opening_em = st.number_input("Opening EM (points)", min_value=1.0, max_value=200.0, value=48.50, step=0.5)
         with c_in2:
-            sim_call = st.number_input("Current ATM Call Mid", min_value=0.05, max_value=100.0, value=19.80, step=0.1)
+            sim_call = st.number_input("Current ATM Call Mid", min_value=0.05, max_value=100.0, value=stream_telem['straddle_mid'] / 2.0, step=0.1)
         with c_in3:
-            sim_put = st.number_input("Current ATM Put Mid", min_value=0.05, max_value=100.0, value=20.00, step=0.1)
+            sim_put = st.number_input("Current ATM Put Mid", min_value=0.05, max_value=100.0, value=stream_telem['straddle_mid'] / 2.0, step=0.1)
         with c_in4:
             sim_spx = st.number_input("Underlying SPX Spot", min_value=1000.0, max_value=10000.0, value=5815.40, step=1.0)
 

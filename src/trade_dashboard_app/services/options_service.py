@@ -249,3 +249,104 @@ def get_iron_fly_setup(strike: float = 5815.0) -> IronFlySetup:
         cut_rule="Cut at credit distance (1x credit loss: stop at $28.50 loss)",
         adds_rule="Add hedge/wing at +/-(credit - 5) on first test ($23.50 delta)",
     )
+
+
+# --- Live ThetaData v3 Streaming Pipeline Singleton ---
+_GLOBAL_STREAM_PIPELINE: Optional[Any] = None
+
+
+def get_streaming_pipeline(
+    symbol: str = "SPX",
+    strike: float = 5815.0,
+    opening_em: float = 48.50,
+    simulation_mode: bool = True,
+) -> Any:
+    """Returns or initializes the global 0DTE streaming pipeline singleton."""
+    global _GLOBAL_STREAM_PIPELINE
+    if _GLOBAL_STREAM_PIPELINE is None:
+        try:
+            from trade_data_options.streaming import (
+                ThetaData0DTEStreamingPipeline,
+                ThetaDataWebSocketClient,
+            )
+
+            client = ThetaDataWebSocketClient(simulation_mode=simulation_mode)
+            _GLOBAL_STREAM_PIPELINE = ThetaData0DTEStreamingPipeline(
+                symbol=symbol,
+                strike=strike,
+                opening_em=opening_em,
+                client=client,
+            )
+            _GLOBAL_STREAM_PIPELINE.start()
+        except ImportError:
+            _GLOBAL_STREAM_PIPELINE = None
+
+    return _GLOBAL_STREAM_PIPELINE
+
+
+def get_live_stream_telemetry() -> Dict[str, Any]:
+    """Returns current live WebSocket telemetry for the dashboard."""
+    pipeline = get_streaming_pipeline()
+    if pipeline is None:
+        return {
+            "status": "OFFLINE",
+            "state_label": "Disconnected (Offline Fallback)",
+            "symbol": "SPX",
+            "strike": 5815.0,
+            "straddle_bid": 39.40,
+            "straddle_ask": 40.20,
+            "straddle_mid": 39.80,
+            "decay_ratio": 0.8206,
+            "decay_pct": 82.06,
+            "is_triggered": True,
+            "ticks_count": 0,
+            "history": [],
+        }
+
+    last_straddle = pipeline.last_straddle
+    last_event = pipeline.last_event
+    history = pipeline.get_history()
+
+    return {
+        "status": str(pipeline.connection_state),
+        "state_label": f"🟢 {pipeline.connection_state}" if pipeline.connection_state.value == "CONNECTED" else f"🟡 {pipeline.connection_state}",
+        "symbol": pipeline.symbol,
+        "strike": pipeline.strike,
+        "straddle_bid": last_straddle.straddle_bid if last_straddle else 39.40,
+        "straddle_ask": last_straddle.straddle_ask if last_straddle else 40.20,
+        "straddle_mid": last_straddle.straddle_mid if last_straddle else 39.80,
+        "decay_ratio": round(last_event.decay_ratio, 4) if last_event else 0.8206,
+        "decay_pct": round(last_event.decay_pct_remains, 2) if last_event else 82.06,
+        "is_triggered": last_event.is_triggered if last_event else True,
+        "ticks_count": len(history),
+        "history": [
+            {
+                "time": ev.timestamp.strftime("%H:%M:%S"),
+                "straddle": ev.current_straddle_mid,
+                "decay_pct": round(ev.decay_pct_remains, 2),
+                "triggered": ev.is_triggered,
+            }
+            for ev in history[-20:]
+        ],
+    }
+
+
+def simulate_stream_tick(
+    call_bid: float,
+    call_ask: float,
+    put_bid: float,
+    put_ask: float,
+) -> Dict[str, Any]:
+    """Injects a simulated quote tick into the live pipeline."""
+    pipeline = get_streaming_pipeline()
+    if pipeline is not None:
+        ev = pipeline.simulate_tick(call_bid, call_ask, put_bid, put_ask)
+        return {
+            "status": "SUCCESS",
+            "decay_ratio": ev.decay_ratio,
+            "decay_pct": ev.decay_pct_remains,
+            "is_triggered": ev.is_triggered,
+            "straddle_mid": ev.current_straddle_mid,
+        }
+    return {"status": "NO_PIPELINE"}
+

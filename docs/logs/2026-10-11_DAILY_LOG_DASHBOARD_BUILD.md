@@ -12,7 +12,7 @@
 
 ## 1. Executive Summary & Objective
 
-Today's session focused on establishing the inter-AI collaboration bridge on Google Drive and building the core **Streamlit-First Agentic Trading Dashboard** (`trade_dashboard_app` v1.2.0) into the primary monorepo (`trade-suite`). 
+Today's session focused on establishing the inter-AI collaboration bridge on Google Drive and building the core **Streamlit-First Agentic Trading Dashboard** (`trade_dashboard_app` v1.3.0) into the primary monorepo (`trade-suite`). 
 
 All work adheres to the foundational project principles:
 1. **Engine/UI Separation:** Zero trading logic or calculations inside UI components. Pure presentation layer delegating to a typed backend service layer (`services/`).
@@ -143,6 +143,32 @@ src/trade_dashboard_app/
   - Verified 0DTE wing flattening and delta-neutral hedge audit recording.
 - **Test Results:** 8/8 dashboard tests + entire 551-item repo test suite (550 passed, 1 skipped) in 6.25s.
 
+### H. ThetaData V3 Live WebSocket Pipeline & Windows Standalone Desktop Packaging
+- Built `src/trade_data_options/streaming/`:
+  - `models.py`: Immutable dataclasses for real-time options data (`LiveQuote`, `LiveStraddleQuote`, `LiveEMDecayStreamEvent`, `ConnectionState`).
+  - `client.py` (`ThetaDataWebSocketClient`): Asynchronous WebSocket client on a daemon event loop connecting to `ws://127.0.0.1:25503/v3/ws`. Auto-reconnect with exponential backoff and offline simulation mode.
+  - `pipeline.py` (`ThetaData0DTEStreamingPipeline`): Synchronizes ATM Call and Put quotes, tracks intraday straddle decay against the 83.0% threshold, and triggers callbacks immediately upon crossing.
+- Integrated into `src/trade_dashboard_app/services/options_service.py` & `tab6_options_surface.py`:
+  - Added real-time WebSocket connection badge, live NBBO straddle display, and interactive tick injector.
+- Built Native Windows Desktop Runner (`src/trade_dashboard_app/desktop.py`):
+  - Spawns Streamlit in background daemon thread with programmatic `bootstrap.run`.
+  - Discovers dynamic available localhost port (`find_free_port()`).
+  - Embeds Microsoft Edge Chromium WebView2 window via `pywebview`.
+  - On window close, cleanly halts background Streamlit server.
+  - Fail-soft fallback to default system browser if WebView2 is unavailable.
+- Configured PyInstaller Distribution (`packaging/trade_dashboard_app.spec`):
+  - Onedir distribution bundling all Streamlit static web assets, templates, and submodules.
+  - Collects hidden imports: `webview`, `clr`, `pythonnet`, `websockets`, `pyarrow`, `altair`, etc.
+- Authored Automated Build Scripts:
+  - `scripts/build_windows_exe.py` (with pre-build pytest verification and size telemetry).
+  - `scripts/build_windows_exe.ps1` (PowerShell wrapper for Windows environments).
+  - Registered CLI console script `trade-dashboard-app-desktop` in `pyproject.toml`.
+  - Comprehensive documentation in `docs/WINDOWS_DESKTOP_PACKAGING.md`.
+- Added unit tests:
+  - `tests/test_data_options_streaming.py` (4 tests).
+  - `tests/test_dashboard_desktop.py` (4 tests).
+- **Test Results:** 558/559 passed across the full suite (1 skipped, 0 failures) in 5.90s.
+
 ---
 
 ## 4. How to Launch and Verify the Dashboard
@@ -150,21 +176,28 @@ src/trade_dashboard_app/
 From the workspace root (`c:\Agentic AI Algorithmic Trading System Software`):
 
 ```powershell
-# Method 1: Via Python module runner
+# Method 1: Web mode via Python module runner
 python -m trade_dashboard_app
 
-# Method 2: Via Streamlit directly
-streamlit run src/trade_dashboard_app/app.py
+# Method 2: Native Windows Desktop Mode (Edge WebView2)
+python -m trade_dashboard_app --desktop
+# or
+trade-dashboard-app-desktop
+
+# Method 3: Compile Standalone Windows Executable
+python scripts/build_windows_exe.py
+# or
+.\scripts\build_windows_exe.ps1
 
 # Run the test suite
-python -m pytest tests/test_dashboard_app.py
+python -m pytest tests/test_dashboard_app.py tests/test_data_options_streaming.py tests/test_dashboard_desktop.py
 ```
 
 ---
 
 ## 5. Next Steps for Inter-AI Continuity
 
-1. **GitHub Commit & Push:** Commit the new dashboard components and changelog to `origin/master`.
-2. **ThetaData Intraday Integration:** Wire the local ThetaData v3 terminal into the 0DTE options scanner view.
-3. **Native Desktop Packaging:** Configure `pywebview` + `pyinstaller` build spec to generate the standalone Windows `.exe` wrapping Edge WebView2.
-4. **Mattermost / Tailscale Field Ingress:** Wire incoming webhook events from the field mobile app into the live LangGraph state queue.
+1. **Mattermost / Tailscale Field Ingress:** Wire incoming webhook events from the field mobile app into the live LangGraph state queue.
+2. **Authenticode Code Signing:** Configure GitHub Actions release workflow to sign `TradeDashboardApp.exe` with EV/standard code-signing certificate.
+3. **Alpaca Options Paper Execution Adapter:** Wire the 0DTE EM-decay trigger directly into staged Alpaca paper order submission upon Charlie's 1-tap authorization.
+

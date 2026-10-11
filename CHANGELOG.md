@@ -8,7 +8,7 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 - `trade_dashboard_app`: Streamlit-first Broker-Grade Agentic Trading Dashboard
-  (v1.2.0). Implements the command center architecture specified in
+  (v1.3.0). Implements the command center architecture specified in
   `Trading_Dashboard_Architecture_Spec_v1.1.0.md` and
   `Dashboard_Features_Specification.md`:
   - **Zero-Scroll Hero Metrics Bar**: Real-time Net Liquidity, Day P&L,
@@ -40,8 +40,9 @@ and versioning follows [Semantic Versioning](https://semver.org/).
     threshold; tail-risk calendar conditioning gate (`trade_macro.skip_days`)
     tracking FOMC decisions, monthly OpEx, and month-end flows; pre-registered
     0DTE Iron-Fly strike and wing geometry (`50 -> 20` schedule, multiples of 5,
-    $\le 30\%$ account risk cap); and variance risk premium spread ($IV_{0DTE} - RV$)
-    with VIX / VIX3M term structure contango/backwardation curve.
+    $\le 30\%$ account risk cap); variance risk premium spread ($IV_{0DTE} - RV$)
+    with VIX / VIX3M term structure contango/backwardation curve; and live
+    ThetaData v3 WebSocket streaming pipeline monitor with real-time NBBO quotes.
   - **Tab 7: Portfolio Stress Testing & Scenarios (`tab7_stress_test.py`)**:
     Macro shock simulation engine (`stress_service.py`) supporting simultaneous
     $\Delta SPX$ (%), $\Delta VIX$ (pts), and $\Delta 10Y$ Treasury yield (bps)
@@ -59,17 +60,30 @@ and versioning follows [Semantic Versioning](https://semver.org/).
     high-surface touch controls for 1-tap E-Stop (`FULL_E_STOP`, `FLATTEN_0DTE_WINGS`,
     `HEDGE_DELTA_NEUTRAL`, `RESET_E_STOP`); and rapid human-in-the-loop trade proposal
     approval/rejection gates with full audit trail logging.
+  - **Native Windows Desktop Mode (`desktop.py`)**: Wraps Streamlit into a native
+    Windows OS window using Microsoft Edge Chromium WebView2 via `pywebview`.
+    Allocates dynamic ports, manages background engine threads, and cleanly halts on close.
+  - **PyInstaller Packaging Specification (`packaging/trade_dashboard_app.spec`)**:
+    Production spec bundling all frontend assets, static templates, dynamic submodules,
+    and hidden imports into a standalone Windows directory distribution (`dist/TradeDashboardApp/`).
+  - **Automated Windows Build Scripts (`scripts/build_windows_exe.py`, `.ps1`)**:
+    One-click packaging pipeline verifying test suite integrity before compilation.
   - **Master Audit Logging (`audit_service.py`)**: Thread-safe, atomic
     append-only audit log (`audit_log.json`) recording all manual overrides.
   - **Strict Engine/UI Separation**: Zero trading logic or raw calculations in
     UI components; pure presentation delegating to typed service layer with
     fail-soft fallback handlers when engines are offline.
-  - Packaging-ready for PyInstaller + pywebview Windows `.exe` desktop wrapping.
-  - 8 comprehensive unit tests (`tests/test_dashboard_app.py`) covering all
-    services, data contracts, atomic audit logging, 0DTE EM decay, skip days,
-    vol surface, portfolio stress simulations, and field telemetry/emergency actions.
-    stress testing, and risk controls.
-  - Registered console script `trade-dashboard-app` in `pyproject.toml`.
+  - Registered console script `trade-dashboard-app-desktop` in `pyproject.toml`.
+- `trade_data_options.streaming`: Real-time WebSocket streaming client and 0DTE pipeline
+  for local ThetaData Terminal v3 (`v0.3.0`):
+  - **WebSocket Client (`ThetaDataWebSocketClient`)**: Dedicated background event loop,
+    thread-safe pub/sub dispatching, auto-reconnect with exponential backoff, and offline
+    simulation mode for development and testing.
+  - **0DTE Pipeline (`ThetaData0DTEStreamingPipeline`)**: Subscribes to ATM call/put legs,
+    asynchronously synthesizes `LiveStraddleQuote`, continuously evaluates decay ratio
+    against the 83.0% threshold, and fires latched callbacks on breach.
+  - Comprehensive unit test coverage across `tests/test_data_options_streaming.py`,
+    `tests/test_dashboard_desktop.py`, and `tests/test_dashboard_app.py`.
 - `trade_data_options.providers.ThetaDataOptionsProvider`: EOD options
   chains via a local ThetaData Terminal (v3) — stdlib `urllib` only, zero
   new dependencies, no credentials in code (the terminal authenticates

@@ -45,10 +45,19 @@ from .pricing import bs_greeks, bs_price, implied_volatility, intrinsic_value
 from .providers import OptionsDataProvider, RawChain, YFinanceOptionsProvider
 from .symbols import parse_occ, to_occ
 from .times import ZERO_DTE_YEARS, time_to_expiry
+from .streaming import (
+    ConnectionState,
+    LiveEMDecayStreamEvent,
+    LiveQuote,
+    LiveStraddleQuote,
+    ThetaData0DTEStreamingPipeline,
+    ThetaDataWebSocketClient,
+)
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
+    "ConnectionState",
     "ConvergenceError",
     "DecayTrigger",
     "DiskCache",
@@ -56,6 +65,11 @@ __all__ = [
     "ExpiryNotFoundError",
     "Greeks",
     "HYPOTHESIS_THRESHOLD",
+    "LiveEMDecayStreamEvent",
+    "LiveQuote",
+    "LiveStraddleQuote",
+    "ThetaData0DTEStreamingPipeline",
+    "ThetaDataWebSocketClient",
     "OptionChain",
     "OptionContract",
     "OptionQuote",
