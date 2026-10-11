@@ -186,3 +186,49 @@ def test_options_service_em_decay():
     assert fly.recommended_lots % 5 == 0  # Multiples of 5 rule
     assert fly.max_risk_per_spread > 0
 
+
+def test_stress_service_evaluations():
+    from trade_dashboard_app.services import (
+        HISTORICAL_PRESETS,
+        ShockResult,
+        evaluate_portfolio_shock,
+        generate_gamma_curve_points,
+    )
+
+    assert len(HISTORICAL_PRESETS) >= 4
+    preset_names = [p.name for p in HISTORICAL_PRESETS]
+    assert any("COVID" in p for p in preset_names)
+    assert any("2022" in p for p in preset_names)
+
+    # Moderate bear shock: SPX -3%, VIX +10, Yield +25 bps
+    res = evaluate_portfolio_shock(
+        delta_spx_pct=-3.0,
+        delta_vix_pts=10.0,
+        delta_yield_bps=25.0,
+    )
+    assert isinstance(res, ShockResult)
+    assert res.projected_nlv < res.initial_nlv
+    assert res.total_dollar_pnl < 0
+    assert res.equity_legs_pnl < 0
+    assert res.duration_leg_pnl < 0  # Yield spike hurts TLT
+    assert res.options_legs_pnl < 0   # Vega + Gamma loss
+    assert res.post_shock_gamma > 142.50  # Gamma surges
+    assert res.proposed_hedge_action in ["SELL (TRIM)", "NONE"]
+    assert res.proposed_hedge_instrument == "SPY"
+
+    # Severe crash shock: SPX -10%, VIX +30, Yield -30 bps -> should trigger kill threshold
+    crash_res = evaluate_portfolio_shock(
+        delta_spx_pct=-10.0,
+        delta_vix_pts=30.0,
+        delta_yield_bps=-30.0,
+    )
+    assert crash_res.breach_kill_threshold is True
+    assert crash_res.total_pct_pnl < -3.0
+
+    # Gamma curve generation
+    curve = generate_gamma_curve_points(delta_vix=10.0, delta_yield=25.0)
+    assert len(curve) == 11
+    assert curve[0]["SPX Move (%)"] == -5.0
+    assert curve[-1]["SPX Move (%)"] == 5.0
+
+

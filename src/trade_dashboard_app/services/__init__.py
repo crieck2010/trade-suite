@@ -45,6 +45,13 @@ from .options_service import (
     get_skip_day_status,
     get_vol_surface_spread,
 )
+from .stress_service import (
+    HISTORICAL_PRESETS,
+    ScenarioPreset,
+    ShockResult,
+    evaluate_portfolio_shock,
+    generate_gamma_curve_points,
+)
 
 __all__ = [
     "PortfolioMetrics",
@@ -61,6 +68,9 @@ __all__ = [
     "SkipDayStatus",
     "VolSurfaceSpread",
     "IronFlySetup",
+    "ScenarioPreset",
+    "ShockResult",
+    "HISTORICAL_PRESETS",
     "record_audit_event",
     "read_audit_log",
     "get_portfolio_metrics",
@@ -84,4 +94,7 @@ __all__ = [
     "get_skip_day_status",
     "get_vol_surface_spread",
     "get_iron_fly_setup",
+    "evaluate_portfolio_shock",
+    "generate_gamma_curve_points",
 ]
+

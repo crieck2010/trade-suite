@@ -105,6 +105,26 @@ src/trade_dashboard_app/
   - Verified wing geometry and multiples-of-5 contract sizing.
 - **Test Results:** 6/6 dashboard tests + 55 options/macro tests (61/61 total) passed cleanly.
 
+### F. Tab 7: Portfolio Stress Testing & Scenario Analysis
+- Built `src/trade_dashboard_app/services/stress_service.py`:
+  - Multi-asset shock engine: simultaneous $\Delta SPX$ (%), $\Delta VIX$ (pts), and $\Delta 10Y$ yield (bps) shocks.
+  - Taylor expansion P&L decomposition for equities, duration (TLT), and 0DTE options spreads.
+  - Non-linear 0DTE hyper-gamma surge curve generation across spot moves from -5% to +5%.
+  - Integrates `trade_hedge` rules (`delta_trim_rule`) generating exact offsetting SPY share proposals when post-shock delta exceeds hysteresis tolerance.
+  - Curated 4 historical macro presets: 2020 COVID Crash, 2022 Correlated Bond-Equity Drawdown, 0DTE Gamma Squeeze, Melt-Up Expansion Day.
+- Built `src/trade_dashboard_app/tabs/tab7_stress_test.py`:
+  - Interactive scenario preset dropdown with auto-loading shock values.
+  - Real-time shock slider controls for instantaneous risk re-calculation.
+  - Visual P&L decomposition table with explicit causal mechanisms.
+  - "Stage Auto-Hedge Order to Desk" button with atomic audit logging.
+  - Multi-asset convexity table visualizing non-linear gamma acceleration.
+- Added comprehensive unit tests in `tests/test_dashboard_app.py` (`test_stress_service_evaluations`):
+  - Tested moderate bear shocks (-3% SPX, +10 VIX, +25 bps yield) verifying equity, duration, and options drawdown.
+  - Tested severe crash threshold breach triggering E-Stop flags.
+  - Verified multi-point gamma curve generation.
+- **Test Results:** 7/7 dashboard tests + CLI & risk tests (53/53 total) passed cleanly.
+
+
 
 ---
 

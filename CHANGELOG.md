@@ -42,15 +42,23 @@ and versioning follows [Semantic Versioning](https://semver.org/).
     0DTE Iron-Fly strike and wing geometry (`50 -> 20` schedule, multiples of 5,
     $\le 30\%$ account risk cap); and variance risk premium spread ($IV_{0DTE} - RV$)
     with VIX / VIX3M term structure contango/backwardation curve.
+  - **Tab 7: Portfolio Stress Testing & Scenarios (`tab7_stress_test.py`)**:
+    Macro shock simulation engine (`stress_service.py`) supporting simultaneous
+    $\Delta SPX$ (%), $\Delta VIX$ (pts), and $\Delta 10Y$ Treasury yield (bps)
+    shocks; Taylor expansion decomposition across equities, duration (TLT), and
+    0DTE options spreads; non-linear hyper-gamma surge curves across spot moves;
+    automated hedge generation via `trade_hedge` rules (`delta_trim_rule`) with
+    one-click staging to desk; and historical stress presets (2020 COVID Crash,
+    2022 Correlated Bond-Equity Crash, 0DTE Gamma Squeeze, Melt-Up).
   - **Master Audit Logging (`audit_service.py`)**: Thread-safe, atomic
     append-only audit log (`audit_log.json`) recording all manual overrides.
   - **Strict Engine/UI Separation**: Zero trading logic or raw calculations in
     UI components; pure presentation delegating to typed service layer with
     fail-soft fallback handlers when engines or offline.
   - Packaging-ready for PyInstaller + pywebview Windows `.exe` desktop wrapping.
-  - 6 comprehensive unit tests (`tests/test_dashboard_app.py`) covering all
+  - 7 comprehensive unit tests (`tests/test_dashboard_app.py`) covering all
     services, data contracts, atomic audit logging, 0DTE EM decay, skip days,
-    and risk controls.
+    stress testing, and risk controls.
   - Registered console script `trade-dashboard-app` in `pyproject.toml`.
 - `trade_data_options.providers.ThetaDataOptionsProvider`: EOD options
   chains via a local ThetaData Terminal (v3) — stdlib `urllib` only, zero

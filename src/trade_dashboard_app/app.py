@@ -20,6 +20,7 @@ from .tabs import (
     render_tab4,
     render_tab5,
     render_tab6,
+    render_tab7,
 )
 
 
@@ -117,13 +118,14 @@ def run_app() -> None:
     st.divider()
 
     # Core Navigation Tabs
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "🌐 Tab 1: Global Macro & P&L",
         "🧠 Tab 2: Agent Visualizer",
         "📜 Tab 3: Execution Log & Blotter",
         "📈 Tab 4: Strategy & Backtest",
         "🛑 Tab 5: Risk Controls & E-Stop",
         "⚡ Tab 6: 0DTE Options & Vol Surface",
+        "🌪️ Tab 7: Portfolio Stress Test & Scenarios",
     ])
 
     with tab1:
@@ -138,8 +140,11 @@ def run_app() -> None:
         render_tab5()
     with tab6:
         render_tab6()
+    with tab7:
+        render_tab7()
 
 
 if __name__ == "__main__":
     run_app()
+
 
