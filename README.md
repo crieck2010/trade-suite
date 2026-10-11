@@ -26,7 +26,7 @@ environment introspection, end-to-end research workflows, and a unified CLI.
 | Module | Role |
 |---|---|
 | [trade-data-equities](https://github.com/crieck2010/trade-data-equities) | Market data: stocks & ETFs (delayed) |
-| [trade-data-options](https://github.com/crieck2010/trade-data-options) | Market data: options chains, pricing, Greeks |
+| [trade-data-options](https://github.com/crieck2010/trade-data-options) | Market data: options chains, pricing, Greeks, EM + EM-decay trigger |
 | [trade-data-futures](https://github.com/crieck2010/trade-data-futures) | Market data: futures contracts & term structure |
 | [trade-data-crypto](https://github.com/crieck2010/trade-data-crypto) | Market data: crypto spot / perpetuals |
 | [trade-stream](https://github.com/crieck2010/trade-stream) | Real-time streaming: WebSocket transport, pub/sub bus, tick recording and replay |

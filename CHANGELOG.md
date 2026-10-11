@@ -7,6 +7,23 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `trade_data_options.em_decay`: EM-decay entry trigger — a pure-stdlib
+  timing filter on premium decay (current ATM straddle as a fraction of the
+  opening EM). `em_decay()`, `em_decay_from_expected_move()` (takes an
+  `ExpectedMove`), `decay_trigger()` and frozen `DecayTrigger`; default
+  threshold 0.83 is the PRE-REGISTERED HYPOTHESIS VALUE from the source
+  video, explicitly not a tuned optimum. Module docstring states "a
+  trigger, not an edge" — the edge claim lives in the hypothesis doc.
+- `trade_strategies/research/0dte-em-decay-ironfly.md`: pre-registered
+  hypothesis doc with the FULL frozen rule set (83% EM-decay entry, iron-fly
+  structure, 50→20 wing schedule, ±(credit−5) adds, cut at credit distance,
+  FOMC/OpEx/month-end skip days, ≤30% account / ≤1% per-fly sizing),
+  validation plan (Tier-1, DSR trial accounting via trade-multitest from
+  day one), data requirement (ThetaData intraday SPX NBBO), and 1C recorded
+  as blocked on data + NBBO fill engine.
+- 20 new tests (`tests/test_data_options_em_decay.py`): hand-computed decay
+  fractions, threshold boundary (0.8301 vs 0.8299), invalid inputs,
+  ExpectedMove integration.
 - `trade_macro.skip_days`: skip-day conditioning — tail-risk-day research
   filter for short-premium work (FOMC announcement days, monthly
   options-expiration days, month-end). Pure stdlib calendar read, no data,

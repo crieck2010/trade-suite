@@ -25,6 +25,13 @@ from .exceptions import (
     SymbolParseError,
 )
 from .expected_move import ExpectedMove, expected_move, expected_move_for_expiry, scale_expected_move
+from .em_decay import (
+    DecayTrigger,
+    HYPOTHESIS_THRESHOLD,
+    decay_trigger,
+    em_decay,
+    em_decay_from_expected_move,
+)
 from .models import (
     Greeks,
     OptionChain,
@@ -43,10 +50,12 @@ __version__ = "0.2.0"
 
 __all__ = [
     "ConvergenceError",
+    "DecayTrigger",
     "DiskCache",
     "ExpectedMove",
     "ExpiryNotFoundError",
     "Greeks",
+    "HYPOTHESIS_THRESHOLD",
     "OptionChain",
     "OptionContract",
     "OptionQuote",
@@ -69,6 +78,9 @@ __all__ = [
     "bs_price",
     "crr_price",
     "early_exercise_premium",
+    "decay_trigger",
+    "em_decay",
+    "em_decay_from_expected_move",
     "ensure_utc",
     "expected_move",
     "expected_move_for_expiry",
