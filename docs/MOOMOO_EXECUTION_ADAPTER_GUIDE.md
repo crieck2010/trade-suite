@@ -82,19 +82,31 @@ Moomoo Open API uses a local gateway daemon called **OpenD**. It runs locally on
 ### Step 1: Install Python SDK
 The Python SDK has already been installed into the environment:
 ```powershell
-pip install moomoo-api
+pip install moomoo-api py7zr
 ```
 
-### Step 2: Download & Launch Moomoo OpenD
-1. Download **Moomoo OpenD for Windows** from the official portal:  
-   [https://openapi.moomoo.com/](https://openapi.moomoo.com/)
-2. Install and launch OpenD.
-3. Configure `OpenD.xml` or use the OpenD GUI:
-   - **Listen Port:** `11111` (Default)
-   - **Listen IP:** `127.0.0.1` (Local loopback only)
-   - **Login Account:** Charlie's Moomoo Account ID
-   - **Trading Password:** Stored securely or prompted via CLI/environment variable `MOOMOO_TRADE_PASSWORD`.
-4. Ensure OpenD reports `Connected to server successfully`.
+### Step 2: Automated Download & Launch (Already Completed)
+OpenD v10.11.7108 has been downloaded, extracted, configured, and launched in your workspace:
+- **Location:** `tools/moomoo_opend/moomoo_OpenD_10.11.7108_Windows/moomoo_OpenD_10.11.7108_Windows/OpenD.exe`
+- **Configuration (`OpenD.xml`):** Configured for `<ip>127.0.0.1</ip>` and `<api_port>11111</api_port>`.
+- **Status:** **ONLINE** (`127.0.0.1:11111` is actively listening).
+
+To launch or check OpenD in the future:
+```powershell
+# Check status
+python scripts/setup_moomoo_opend.py --check
+
+# Launch OpenD GUI
+.\scripts\launch_moomoo_opend.ps1
+# or
+python scripts/setup_moomoo_opend.py --launch --gui
+```
+
+### Step 3: Workstation GUI Login (Action Required by Charlie)
+1. The **Moomoo OpenD** GUI window is now open on your desktop.
+2. Enter your standard Moomoo account login credentials (phone/email/ID and login password/SMS code).
+3. Check **Remember Account** so OpenD persists your login across sessions.
+4. Once logged in, OpenD displays a green status indicator and begins accepting API commands from `trade_execution.MoomooExecutionAdapter`!
 
 ---
 

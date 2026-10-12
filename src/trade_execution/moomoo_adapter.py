@@ -105,6 +105,13 @@ class MoomooExecutionAdapter(ExecutionAdapter):
         }
         self._simulated_balance = 100000.0
 
+        # Enable daemon threads so moomoo background workers don't block process exit
+        if _MOOMOO_AVAILABLE and hasattr(ft, "SysConfig"):
+            try:
+                ft.SysConfig.set_all_thread_daemon(True)
+            except Exception:
+                pass
+
     # -------------------------------------------------------------------------
     # Connection Lifecycle
     # -------------------------------------------------------------------------
@@ -116,12 +123,24 @@ class MoomooExecutionAdapter(ExecutionAdapter):
             self._connected = False
             return False
 
+        # Quick socket pre-check to avoid long connection timeout if OpenD is down
+        import socket
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.5)
+                if s.connect_ex((self.cfg.host, self.cfg.port)) != 0:
+                    logger.info("OpenD port %s:%d not responding. Using offline simulation mode.", self.cfg.host, self.cfg.port)
+                    self._connected = False
+                    return False
+        except Exception:
+            self._connected = False
+            return False
+
         try:
             self._trd_ctx = ft.OpenSecTradeContext(
                 host=self.cfg.host,
                 port=self.cfg.port,
                 filter_trdmarket=ft.TrdMarket.US,
-                is_sync=True,
             )
             self._connected = True
             logger.info("Connected to Moomoo OpenD at %s:%s (Env: %s)", self.cfg.host, self.cfg.port, self.cfg.env.value)
