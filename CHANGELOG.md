@@ -84,6 +84,24 @@ and versioning follows [Semantic Versioning](https://semver.org/).
     against the 83.0% threshold, and fires latched callbacks on breach.
   - Comprehensive unit test coverage across `tests/test_data_options_streaming.py`,
     `tests/test_dashboard_desktop.py`, and `tests/test_dashboard_app.py`.
+- `trade_agents.orchestrator`: Mattermost & Tailscale Ingress Gateway (v0.3.0) for
+  secure mobile command ingestion directly into the LangGraph cyclic state DAG:
+  - **Tailscale Mesh IP Restriction**: Enforces RFC 6598 Carrier-Grade NAT subnet validation
+    (`100.64.0.0/10` and local loopback) rejecting untrusted public ingress with `403 Forbidden`.
+  - **LangGraph Cyclic State DAG (`state_dag.py`)**: Thread-safe state machine managing
+    `BusinessState` dictionary through cyclic routing across Node A (Orchestrator), Node B (Dispatcher),
+    Node C (Worker Pool), and Node D (Executive Review).
+  - **Mattermost Slash Command Gateway (`ingress.py`)**: Ingests field commands (`/trade status`,
+    `/trade estop`, `/trade reset-estop`, `/trade flatten-0dte`, `/trade hedge-delta`,
+    `/trade approve <id>`, `/trade reject <id>`, `/trade brief <details>`, `/trade help`).
+  - **Mattermost Egress Notifier (`egress.py`)**: Asynchronously dispatches rich alert cards
+    (Kill Switch activation, 0DTE hyper-gamma breach, staged order proposals) to Mattermost Incoming Webhooks.
+  - **Standalone Server Runner (`server.py`)**: Standard library HTTP server (`http.server`) running on
+    port 8065 or as a daemon thread.
+  - **Dashboard Simulator (`tab2_agent_visualizer.py`)**: Interactive field console within the
+    Agent Visualizer tab allowing desk simulation and verification of incoming slash commands.
+  - **Comprehensive Unit Testing**: 6 new tests in `tests/test_mattermost_ingress.py` bringing monorepo
+    passing test count to 564 tests (0 failures).
 - `trade_data_options.providers.ThetaDataOptionsProvider`: EOD options
   chains via a local ThetaData Terminal (v3) — stdlib `urllib` only, zero
   new dependencies, no credentials in code (the terminal authenticates

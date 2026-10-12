@@ -169,6 +169,41 @@ src/trade_dashboard_app/
   - `tests/test_dashboard_desktop.py` (4 tests).
 - **Test Results:** 558/559 passed across the full suite (1 skipped, 0 failures) in 5.90s.
 
+### I. Mattermost & Tailscale Ingress Gateway (Mobile Field Operations)
+- Built `src/trade_agents/orchestrator/`:
+  - `models.py`: Immutable data models for mobile slash command ingress (`IngressMessage`, `IngressResponse`, `MessageSource`) and IP validation `is_tailscale_ip(ip)` strictly restricting command execution to RFC 6598 CGNAT carrier subnet (`100.64.0.0/10`) or local loopback.
+  - `state_dag.py` (`LangGraphCyclicStateDAG`): Thread-safe cyclic state machine maintaining `BusinessState` with cyclical message routing across Node A (Orchestrator), Node B (Dispatcher), Node C (Worker Pool), and Node D (Executive Review).
+  - `ingress.py` (`MattermostIngressGateway`): Ingests and routes slash commands:
+    - `/trade status`: Returns high-density desk summary, active regime, day P&L, 0DTE gamma, and open proposals.
+    - `/trade estop [reason]`: Instant emergency kill switch, freezing trading and logging to `audit_log.json`.
+    - `/trade reset-estop`: Clears emergency lock after verification.
+    - `/trade flatten-0dte`: Liquidates all short gamma wings.
+    - `/trade hedge-delta`: Dispatches immediate delta-trim order.
+    - `/trade approve <id>` / `/trade reject <id>`: Charlie's mobile human-in-the-loop gate for pending proposals.
+    - `/trade brief <details>`: Ingests raw strategy concepts into Idea Journal (`strategy_briefs.jsonl`) per `Strategy Intake Guide.md`.
+    - `/trade help`: Detailed command syntax and field usage guide.
+  - `egress.py` (`MattermostEgressNotifier`): Broadcasts high-priority alerts (E-Stop engaged, gamma threshold breach, proposal staged) to Mattermost Incoming Webhooks (`MATTERMOST_WEBHOOK_URL`) with fail-soft in-memory queue fallback.
+  - `server.py`: Standalone lightweight HTTP server (`http.server`) listening on port 8065 or running as a daemon background service.
+- Integrated into `src/trade_dashboard_app/`:
+  - `services/agent_service.py`: Wires global `LangGraphCyclicStateDAG` and `MattermostIngressGateway` singletons, exposes `dispatch_mobile_mattermost_command` and `get_mattermost_gateway_status`.
+  - `tabs/tab2_agent_visualizer.py`: Embedded gateway status panel, webhook endpoint info, and an interactive Mobile Slash Command Simulator console.
+- Added comprehensive unit tests in `tests/test_mattermost_ingress.py` (6 tests):
+  - Verified Tailscale IP validation and 403 Forbidden rejection for unauthorized remote IPs.
+  - Tested slash command routing for `/trade status`, `/trade estop`, `/trade flatten-0dte`, `/trade brief`.
+  - Tested outbound egress webhook alert serialization and fail-soft behavior.
+  - Verified dashboard service integration and simulation execution.
+- **Test Results:** 564/565 passed across the full suite (1 skipped, 0 failures) in 7.19s.
+
+### J. Brokerage Execution Architecture & Multi-Agent DevBridge Setup
+- Authored [`docs/BROKER_EXECUTION_EVALUATION.md`](file:///c:/Agentic%20AI%20Algorithmic%20Trading%20System%20Software/docs/BROKER_EXECUTION_EVALUATION.md):
+  - Comprehensive comparison of Alpaca vs. Tradier Brokerage vs. Tastytrade vs. Interactive Brokers (IBKR) for our specific architecture:
+    - **Equities (RegCond-1 SPY/TLT/GLD/CPER):** Alpaca is optimal ($0 commission, fractional shares, robust REST API).
+    - **0DTE Options (EM-Decay Iron-Fly):** Tradier is strongly recommended over Alpaca due to cash-settled European SPX/XSP index options (eliminating physical share delivery and pin risk), Section 1256 60/40 tax treatment, and a flat $10/month subscription with $0 commission per contract.
+    - **Recommended Hybrid Setup:** Alpaca API for monthly macro equity rebalancing + Tradier API for intraday 0DTE cash-settled SPX/XSP options.
+- Authored [`AGENTS.md`](file:///c:/Agentic%20AI%20Algorithmic%20Trading%20System%20Software/AGENTS.md) codifying the Multi-Agent DevBridge collaboration protocol:
+  - Establishes directory contracts (`inbox/`, `processing/`, `completed/`) on Google Drive (`G:\My Drive\inter-AI communications\agentic algorithmic trading system tools`).
+  - Implemented 4-hour background polling schedule (`task-762`) to ingest tickets from Meta Muse and Charlie.
+
 ---
 
 ## 4. How to Launch and Verify the Dashboard
@@ -189,15 +224,20 @@ python scripts/build_windows_exe.py
 # or
 .\scripts\build_windows_exe.ps1
 
+# Method 4: Run Mattermost Ingress Webhook Server
+python -m trade_agents.orchestrator.server --port 8065
+
 # Run the test suite
-python -m pytest tests/test_dashboard_app.py tests/test_data_options_streaming.py tests/test_dashboard_desktop.py
+python -m pytest tests/test_dashboard_app.py tests/test_data_options_streaming.py tests/test_dashboard_desktop.py tests/test_mattermost_ingress.py
 ```
 
 ---
 
 ## 5. Next Steps for Inter-AI Continuity
 
-1. **Mattermost / Tailscale Field Ingress:** Wire incoming webhook events from the field mobile app into the live LangGraph state queue.
-2. **Authenticode Code Signing:** Configure GitHub Actions release workflow to sign `TradeDashboardApp.exe` with EV/standard code-signing certificate.
-3. **Alpaca Options Paper Execution Adapter:** Wire the 0DTE EM-decay trigger directly into staged Alpaca paper order submission upon Charlie's 1-tap authorization.
+1. **Broker Execution Adapters:** Build modular order execution adapters in `src/trade_execution/`:
+   - Alpaca adapter for monthly RegCond-1 equity/ETF rebalancing.
+   - Tradier adapter for cash-settled 0DTE SPX/XSP iron-fly staging.
+2. **Authenticode Code Signing:** Configure CI/CD release workflow to sign `TradeDashboardApp.exe` with standard code-signing certificate.
+3. **Drive DevBridge Inbox Ingestion:** Continue processing task tickets dropped into `inbox/` by Meta Muse and Charlie via standing 4-hour background cron.
 

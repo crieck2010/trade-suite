@@ -141,8 +141,17 @@ from .verdicts import (
     coerce_verdict,
     verdict_from_dict,
 )
+from .orchestrator import (
+    IngressMessage,
+    IngressResponse,
+    LangGraphCyclicStateDAG,
+    MattermostEgressNotifier,
+    MattermostIngressGateway,
+    MessageSource,
+    is_tailscale_ip,
+)
 
-__version__ = "0.13.0"
+__version__ = "0.14.0"
 __all__ = [
     "Agent",
     "Allocation",
@@ -255,5 +264,13 @@ __all__ = [
     "coerce_verdict",
     "PROB_SUM_TOL",
     "VERDICT_TYPES",
+    # orchestrator & ingress gateway (v0.14.0)
+    "IngressMessage",
+    "IngressResponse",
+    "MessageSource",
+    "is_tailscale_ip",
+    "LangGraphCyclicStateDAG",
+    "MattermostIngressGateway",
+    "MattermostEgressNotifier",
     "__version__",
 ]

@@ -20,10 +20,12 @@ from .portfolio_service import (
     get_portfolio_metrics,
 )
 from .agent_service import (
+    dispatch_mobile_mattermost_command,
     get_agent_reputation_leaderboard,
     get_business_state,
     get_debate_transcript,
     get_hardware_metrics,
+    get_mattermost_gateway_status,
     get_node_topology,
 )
 from .risk_service import (
@@ -93,6 +95,8 @@ __all__ = [
     "get_debate_transcript",
     "get_agent_reputation_leaderboard",
     "get_hardware_metrics",
+    "get_mattermost_gateway_status",
+    "dispatch_mobile_mattermost_command",
     "get_risk_status",
     "trigger_kill_switch",
     "reset_kill_switch",

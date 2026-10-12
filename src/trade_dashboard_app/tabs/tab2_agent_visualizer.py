@@ -13,10 +13,12 @@ import pandas as pd
 import streamlit as st
 
 from ..services import (
+    dispatch_mobile_mattermost_command,
     get_agent_reputation_leaderboard,
     get_business_state,
     get_debate_transcript,
     get_hardware_metrics,
+    get_mattermost_gateway_status,
     get_node_topology,
 )
 
@@ -69,6 +71,41 @@ def render_tab2() -> None:
             })
         with st.expander("Completed Artifacts", expanded=False):
             st.write(state.get("completed_artifacts", []))
+
+    st.divider()
+
+    # 3. Mattermost & Tailscale Ingress Gateway Console
+    st.subheader("📱 Mattermost & Tailscale Ingress Gateway")
+    gw_status = get_mattermost_gateway_status()
+
+    with st.container(border=True):
+        gw_c1, gw_c2 = st.columns([2, 3])
+        with gw_c1:
+            st.markdown(f"**Gateway State:** `🟢 {gw_status['status']}`")
+            st.caption(f"Endpoint: `{gw_status['endpoint']}`")
+            st.markdown(f"**Tailscale Mesh Security:** `{gw_status['mesh_security']}`")
+            st.caption(f"Authorized Node IP: `{gw_status['tailscale_ip']}` (Port {gw_status['port']})")
+
+        with gw_c2:
+            st.markdown("**Test Mobile Slash Command Simulator:**")
+            t_col1, t_col2 = st.columns([3, 1])
+            with t_col1:
+                test_cmd = st.text_input("Mattermost Command", value="/trade status", key="mm_test_input")
+            with t_col2:
+                send_clicked = st.button("🚀 Dispatch", key="mm_send_btn", use_container_width=True)
+
+            if send_clicked and test_cmd:
+                cmd_parts = test_cmd.strip().split(maxsplit=1)
+                cmd_name = cmd_parts[0]
+                cmd_args = cmd_parts[1] if len(cmd_parts) > 1 else ""
+                result = dispatch_mobile_mattermost_command(
+                    command=cmd_name,
+                    text=cmd_args,
+                    user_name="Charlie Rieck (Field Simulator)",
+                    remote_ip="100.82.140.22",
+                )
+                st.markdown(f"**Gateway Response ({result.get('response_type', 'in_channel')}):**")
+                st.info(result.get("text", ""))
 
     st.divider()
 
