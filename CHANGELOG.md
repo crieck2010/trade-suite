@@ -102,6 +102,27 @@ and versioning follows [Semantic Versioning](https://semver.org/).
     Agent Visualizer tab allowing desk simulation and verification of incoming slash commands.
   - **Comprehensive Unit Testing**: 6 new tests in `tests/test_mattermost_ingress.py` bringing monorepo
     passing test count to 564 tests (0 failures).
+- `trade_execution`: Multi-broker Strategy Execution Layer (v0.1.0):
+  - **Abstract Execution Adapter (`base.py`)**: Defines `ExecutionAdapter(ABC)` standardizing
+    order payloads, combo payloads, execution results, account states, and position snapshots.
+  - **Moomoo Execution Adapter (`moomoo_adapter.py`)**: Bridges strategy execution directly to
+    Charlie's funded Moomoo margin account via local OpenD (`127.0.0.1:11111`) and `moomoo-api`.
+  - **Single-Leg ETF Rebalancing (`place_order`)**: Executes delta sizing orders for RegCond-1
+    (`SPY`, `TLT`, `GLD`, `CPER`) with $0 commissions.
+  - **Atomic Multi-Leg Options Spreads (`place_combo_order`)**: Directly supports European cash-settled
+    index options (`SPX`, `XSP`), routing 4-leg 0DTE Iron-Flies simultaneously on exchange with
+    zero leg-in risk, IRC Section 1256 tax rates, and $0.50/contract pricing.
+  - **Factory Geometry Builder (`create_0dte_iron_fly_payload`)**: Automatically rounds strikes
+    to multiples of 5 and structures the pre-registered 4-leg geometry (short ATM straddle + 50-wide long wings).
+  - **Hardware-Grade Safety Gates**:
+    - Mandatory `allow_live_trading=True` configuration latch.
+    - Trade password unlock gate (`unlock_live_trading`) requiring Charlie's PIN/password before live orders submit.
+    - Atomic append-only `audit_log.json` logging on all executions, cancellations, and unlocks.
+    - High-fidelity offline simulation fallback for research and testing without live OpenD.
+  - **Dashboard Tab 3 Integration**: Live Moomoo OpenD status metrics (buying power, cash, margin,
+    connection state, gate status) and an interactive 0DTE combo test dispatcher.
+  - **Comprehensive Unit Testing**: 8 new unit tests in `tests/test_moomoo_execution.py` bringing monorepo
+    passing test count to 572 tests (0 failures).
 - `trade_data_options.providers.ThetaDataOptionsProvider`: EOD options
   chains via a local ThetaData Terminal (v3) — stdlib `urllib` only, zero
   new dependencies, no credentials in code (the terminal authenticates

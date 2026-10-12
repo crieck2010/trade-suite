@@ -36,7 +36,12 @@ from .risk_service import (
     resolve_proposal,
     trigger_kill_switch,
 )
-from .execution_service import get_order_blotter, get_validation_telemetry
+from .execution_service import (
+    get_moomoo_adapter_instance,
+    get_moomoo_execution_status,
+    get_order_blotter,
+    get_validation_telemetry,
+)
 from .options_service import (
     EMDecayStatus,
     IronFlySetup,
@@ -105,6 +110,8 @@ __all__ = [
     "get_hedge_loop_status",
     "get_order_blotter",
     "get_validation_telemetry",
+    "get_moomoo_execution_status",
+    "get_moomoo_adapter_instance",
     "get_em_decay_status",
     "get_skip_day_status",
     "get_vol_surface_spread",

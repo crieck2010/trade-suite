@@ -49,3 +49,49 @@ def render_tab3() -> None:
         st.metric("Commission Total (Month)", "$4.25", "$0.005/share")
     with f3:
         st.success("Fidelity Guard: CLEAN\n\nNo persistent drift detected between backtest and paper fills.")
+
+    st.divider()
+    st.markdown("### 🔌 Moomoo OpenAPI Execution Gateway (`moomoo-api`)")
+    from ..services import get_moomoo_execution_status
+    moomoo_status = get_moomoo_execution_status()
+
+    m1, m2, m3, m4 = st.columns(4)
+    with m1:
+        conn_label = "ONLINE (OpenD)" if moomoo_status["connected"] else "OFFLINE (Simulated)"
+        st.metric("OpenD Gateway", conn_label, moomoo_status["host"])
+    with m2:
+        env_label = moomoo_status["env"]
+        st.metric("Execution Mode", env_label, "Paper" if env_label == "SIMULATE" else "Live Real-Money")
+    with m3:
+        st.metric("Margin Buying Power", f"${moomoo_status['buying_power']:,.2f}", f"Cash: ${moomoo_status['cash']:,.2f}")
+    with m4:
+        gate_status = "UNLOCKED" if moomoo_status["live_unlocked"] else "LOCKED (Safe)"
+        st.metric("Trading Gate", gate_status, "Charlie Human-in-the-Loop")
+
+    with st.expander("🛠️ Moomoo Execution & 0DTE Multi-Leg Test Dispatcher"):
+        st.markdown(
+            "Test dispatching single-leg ETF orders (RegCond-1) or atomic 4-leg European cash-settled "
+            "`SPX`/`XSP` Iron-Fly combo orders directly through `MoomooExecutionAdapter`."
+        )
+        col_test1, col_test2 = st.columns(2)
+        with col_test1:
+            if st.button("🚀 Stage Test SPY Limit Order (Simulate)", use_container_width=True):
+                from trade_execution.moomoo_adapter import MoomooAdapterConfig, MoomooExecutionAdapter
+                from trade_execution.models import OrderPayload, OrderAction, OrderType, ExecutionEnvironment
+                adapter = MoomooExecutionAdapter(MoomooAdapterConfig(env=ExecutionEnvironment.SIMULATE))
+                res = adapter.place_order(OrderPayload(symbol="SPY", action=OrderAction.BUY, quantity=100, price=582.50, order_type=OrderType.LIMIT))
+                st.success(f"Order Dispatched: {res.order_id} | Status: {res.status} | Net: {res.filled_qty} shares @ ${res.avg_price:.2f}")
+        with col_test2:
+            if st.button("🦅 Stage 0DTE European SPX Iron-Fly (Simulate)", use_container_width=True):
+                from trade_execution.moomoo_adapter import MoomooAdapterConfig, MoomooExecutionAdapter
+                from trade_execution.models import ExecutionEnvironment
+                adapter = MoomooExecutionAdapter(MoomooAdapterConfig(env=ExecutionEnvironment.SIMULATE))
+                fly = adapter.create_0dte_iron_fly_payload(
+                    expiry_yymmdd="261012",
+                    atm_strike=5800.0,
+                    wing_width=50.0,
+                    quantity=1,
+                    net_credit=18.50,
+                )
+                res = adapter.place_combo_order(fly)
+                st.success(f"Combo Dispatched: {res.order_id} | Type: {fly.combo_type.value} | 4 Legs Atomic | Net Credit: ${res.avg_price:.2f}")

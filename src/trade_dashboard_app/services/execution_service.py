@@ -95,3 +95,62 @@ def get_validation_telemetry() -> Dict[str, Any]:
         "positive_folds": "10 of 13 folds positive",
         "n_trials_fixed": 2,
     }
+
+
+# Singleton Moomoo adapter instance for dashboard telemetry
+_GLOBAL_MOOMOO_ADAPTER: Any = None
+
+
+def get_moomoo_adapter_instance():
+    """Return the application-wide MoomooExecutionAdapter singleton."""
+    global _GLOBAL_MOOMOO_ADAPTER
+    if _GLOBAL_MOOMOO_ADAPTER is None:
+        try:
+            from trade_execution.moomoo_adapter import MoomooAdapterConfig, MoomooExecutionAdapter
+            from trade_execution.models import ExecutionEnvironment
+
+            cfg = MoomooAdapterConfig(
+                host="127.0.0.1",
+                port=11111,
+                env=ExecutionEnvironment.SIMULATE,
+                allow_live_trading=False,
+            )
+            _GLOBAL_MOOMOO_ADAPTER = MoomooExecutionAdapter(cfg)
+            _GLOBAL_MOOMOO_ADAPTER.connect()
+        except Exception:
+            _GLOBAL_MOOMOO_ADAPTER = None
+    return _GLOBAL_MOOMOO_ADAPTER
+
+
+def get_moomoo_execution_status() -> Dict[str, Any]:
+    """Retrieve Moomoo Open API gateway connection status and account telemetry."""
+    adapter = get_moomoo_adapter_instance()
+    if adapter is None:
+        return {
+            "adapter_available": False,
+            "connected": False,
+            "env": "SIMULATE",
+            "host": "127.0.0.1:11111",
+            "net_liquidity": 0.0,
+            "buying_power": 0.0,
+            "cash": 0.0,
+            "positions_count": 0,
+            "live_unlocked": False,
+        }
+
+    account = adapter.get_account()
+    positions = adapter.get_positions()
+
+    return {
+        "adapter_available": True,
+        "connected": adapter.is_connected(),
+        "env": adapter.get_environment().value,
+        "host": f"{adapter.cfg.host}:{adapter.cfg.port}",
+        "net_liquidity": account.net_liquidity,
+        "buying_power": account.buying_power,
+        "cash": account.cash,
+        "maintenance_margin": account.maintenance_margin,
+        "positions_count": len(positions),
+        "live_unlocked": getattr(adapter, "_is_unlocked", False),
+        "allow_live_trading": adapter.cfg.allow_live_trading,
+    }
