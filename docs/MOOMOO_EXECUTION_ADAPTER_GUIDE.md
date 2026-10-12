@@ -102,11 +102,32 @@ python scripts/setup_moomoo_opend.py --check
 python scripts/setup_moomoo_opend.py --launch --gui
 ```
 
-### Step 3: Workstation GUI Login (Action Required by Charlie)
-1. The **Moomoo OpenD** GUI window is now open on your desktop.
-2. Enter your standard Moomoo account login credentials (phone/email/ID and login password/SMS code).
-3. Check **Remember Account** so OpenD persists your login across sessions.
-4. Once logged in, OpenD displays a green status indicator and begins accepting API commands from `trade_execution.MoomooExecutionAdapter`!
+### Step 3: Workstation GUI Login (Completed)
+1. OpenD GUI launched on workstation and logged in with authorized user profile.
+2. **Screenshot Verification:** 
+   - `API Port` is explicitly displayed as **`11111`** (bottom left above Quick Access).
+   - Bottom right connection indicator is **green with "Connected"**.
+   - Socket listener verified via Windows networking: `127.0.0.1:11111` actively listening on PID 49696 (`moomoo_OpenD`).
+
+### Step 4: Account Topology & Auto-Detection
+OpenD exposes two distinct account contexts under US market filter:
+1. **Live Real-Money Margin Account (`TrdEnv.REAL`):**
+   - Account ID: `<MOOMOO_LIVE_MARGIN_ACCOUNT_ID>` (auto-resolved from OpenD account list)
+   - Broker / Clearing: Futu Inc / Moomoo Financial
+   - Protection: Requires `allow_live_trading=True` and `unlock_live_trading(password)`
+2. **Simulated Paper Trading Margin Account (`TrdEnv.SIMULATE`):**
+   - Account ID: `<MOOMOO_PAPER_ACCOUNT_ID>` (auto-resolved from OpenD account list)
+   - Initial Paper Balance: **$1,000,000.00 Net Liquidity** / **$2,000,000.00 Buying Power**
+   - Permission: Full US Stock, ETF, and Option execution.
+
+The adapter automatically resolves the correct account ID upon connecting.
+
+### Step 5: Automated First Paper Trade Walkthrough
+To execute our end-to-end automated paper trade and verification test:
+```powershell
+python scripts/walkthrough_first_paper_trade.py
+```
+This script handshakes with OpenD on `127.0.0.1:11111`, queries account balances, stages a limit order on `SPY`, receives an official Moomoo Order ID, verifies the order in the live OpenD order book, records to `audit_log.json`, and cleanly cancels the test order.
 
 ---
 

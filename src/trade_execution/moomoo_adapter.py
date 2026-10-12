@@ -48,6 +48,19 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
+
+def _safe_float(val: Any, default: float = 0.0) -> float:
+    """Safely convert any Moomoo response field (including 'N/A') to float."""
+    if val is None or val == "N/A" or val == "":
+        return default
+    try:
+        import math
+        f = float(val)
+        return default if math.isnan(f) else f
+    except (ValueError, TypeError):
+        return default
+
+
 # Optional moomoo import with graceful fallback
 try:
     import moomoo as ft
@@ -143,7 +156,21 @@ class MoomooExecutionAdapter(ExecutionAdapter):
                 filter_trdmarket=ft.TrdMarket.US,
             )
             self._connected = True
-            logger.info("Connected to Moomoo OpenD at %s:%s (Env: %s)", self.cfg.host, self.cfg.port, self.cfg.env.value)
+
+            # Auto-detect account ID if not explicitly specified
+            if self.cfg.account_id == 0:
+                try:
+                    ret, acc_df = self._trd_ctx.get_acc_list()
+                    if ret == ft.RET_OK and not acc_df.empty:
+                        env_str = "REAL" if self.cfg.env == ExecutionEnvironment.REAL else "SIMULATE"
+                        matching = acc_df[acc_df["trd_env"] == env_str]
+                        if not matching.empty:
+                            self.cfg.account_id = int(matching.iloc[0]["acc_id"])
+                            logger.info("Auto-detected Moomoo %s account ID: %s", env_str, self.cfg.account_id)
+                except Exception as acc_exc:
+                    logger.debug("Account ID auto-detection skipped: %s", acc_exc)
+
+            logger.info("Connected to Moomoo OpenD at %s:%s (Env: %s, Acc: %s)", self.cfg.host, self.cfg.port, self.cfg.env.value, self.cfg.account_id)
             return True
         except Exception as exc:
             logger.warning("Failed to connect to local Moomoo OpenD at %s:%s (%s). Using offline fallback.", self.cfg.host, self.cfg.port, exc)
@@ -241,13 +268,13 @@ class MoomooExecutionAdapter(ExecutionAdapter):
             if ret == ft.RET_OK and not data.empty:
                 row = data.iloc[0]
                 return AccountState(
-                    account_id=str(row.get("acc_id", "moomoo-live")),
-                    net_liquidity=float(row.get("total_assets", self._simulated_balance)),
-                    buying_power=float(row.get("power", self._simulated_balance * 4)),
-                    cash=float(row.get("cash", self._simulated_balance)),
-                    maintenance_margin=float(row.get("maintenance_margin", 0.0)),
-                    unrealized_pnl=float(row.get("unrealized_pl", 0.0)),
-                    realized_pnl=float(row.get("realized_pl", 0.0)),
+                    account_id=str(row.get("acc_id", "moomoo-simulated")),
+                    net_liquidity=_safe_float(row.get("total_assets"), self._simulated_balance),
+                    buying_power=_safe_float(row.get("power"), self._simulated_balance * 4),
+                    cash=_safe_float(row.get("cash"), self._simulated_balance),
+                    maintenance_margin=_safe_float(row.get("maintenance_margin"), 0.0),
+                    unrealized_pnl=_safe_float(row.get("unrealized_pl"), 0.0),
+                    realized_pnl=_safe_float(row.get("realized_pl"), 0.0),
                     currency="USD",
                     env=self.cfg.env,
                 )
@@ -276,26 +303,27 @@ class MoomooExecutionAdapter(ExecutionAdapter):
                 acc_index=self.cfg.account_index,
                 currency="USD",
             )
-            if ret == ft.RET_OK and not data.empty:
+            if ret == ft.RET_OK:
                 positions = []
-                for _, row in data.iterrows():
-                    symbol = str(row.get("code", "")).replace("US.", "").replace("US..", "")
-                    sec_type_str = str(row.get("sec_type", "STOCK"))
-                    sec_type = SecurityType.OPTION if "OPTION" in sec_type_str else SecurityType.STOCK
+                if not data.empty:
+                    for _, row in data.iterrows():
+                        symbol = str(row.get("code", "")).replace("US.", "").replace("US..", "")
+                        sec_type_str = str(row.get("sec_type", "STOCK"))
+                        sec_type = SecurityType.OPTION if "OPTION" in sec_type_str else SecurityType.STOCK
 
-                    positions.append(
-                        PositionSnapshot(
-                            symbol=symbol,
-                            quantity=float(row.get("qty", 0.0)),
-                            cost_basis=float(row.get("cost_price", 0.0)),
-                            market_price=float(row.get("nominal_price", 0.0)),
-                            market_value=float(row.get("market_val", 0.0)),
-                            nominal_pnl=float(row.get("pl_val", 0.0)),
-                            unrealized_pnl_pct=float(row.get("pl_ratio", 0.0)),
-                            sec_type=sec_type,
-                            env=self.cfg.env,
+                        positions.append(
+                            PositionSnapshot(
+                                symbol=symbol,
+                                quantity=_safe_float(row.get("qty"), 0.0),
+                                cost_basis=_safe_float(row.get("cost_price"), 0.0),
+                                market_price=_safe_float(row.get("nominal_price"), 0.0),
+                                market_value=_safe_float(row.get("market_val"), 0.0),
+                                nominal_pnl=_safe_float(row.get("pl_val"), 0.0),
+                                unrealized_pnl_pct=_safe_float(row.get("pl_ratio"), 0.0),
+                                sec_type=sec_type,
+                                env=self.cfg.env,
+                            )
                         )
-                    )
                 return positions
 
         return list(self._simulated_positions.values())
@@ -446,6 +474,13 @@ class MoomooExecutionAdapter(ExecutionAdapter):
                 return res
             else:
                 err_msg = str(data)
+                if "does not support option strategy" in err_msg and self.cfg.env == ExecutionEnvironment.SIMULATE:
+                    logger.info(
+                        "Moomoo paper environment does not support native combo orders on exchange; "
+                        "falling back to atomic internal simulation fill."
+                    )
+                    return self._simulate_combo_execution(combo)
+
                 self._record_audit_event("MOOMOO_COMBO_REJECTED", {
                     "combo_type": combo.combo_type.value,
                     "error": err_msg,
@@ -486,6 +521,36 @@ class MoomooExecutionAdapter(ExecutionAdapter):
         })
         return True
 
+    def query_orders(self, status_filter_list: list[str] | None = None) -> list[dict[str, Any]]:
+        """Query active or historical orders from Moomoo OpenD."""
+        if not self.is_connected():
+            return list(self._simulated_orders.values())
+
+        ft_env = ft.TrdEnv.REAL if self.cfg.env == ExecutionEnvironment.REAL else ft.TrdEnv.SIMULATE
+        try:
+            ret, data = self._trd_ctx.order_list_query(
+                status_filter_list=status_filter_list or [],
+                trd_env=ft_env,
+                acc_id=self.cfg.account_id,
+                acc_index=self.cfg.account_index,
+                refresh_cache=True,
+            )
+            if ret == ft.RET_OK and not data.empty:
+                return data.to_dict(orient="records")
+
+            ret_hist, data_hist = self._trd_ctx.history_order_list_query(
+                status_filter_list=status_filter_list or [],
+                trd_env=ft_env,
+                acc_id=self.cfg.account_id,
+                acc_index=self.cfg.account_index,
+            )
+            if ret_hist == ft.RET_OK and not data_hist.empty:
+                return data_hist.to_dict(orient="records")
+            return []
+        except Exception as exc:
+            logger.warning("Error querying Moomoo orders: %s", exc)
+            return []
+
     # -------------------------------------------------------------------------
     # Helper & Geometry Builders (0DTE European SPX / XSP Iron-Fly)
     # -------------------------------------------------------------------------
@@ -495,14 +560,13 @@ class MoomooExecutionAdapter(ExecutionAdapter):
         """Generate official Moomoo option contract symbol for SPX / XSP.
 
         Example:
-        - SPX 5800 Call expiring 261012: `US..SPXW261012C05800000`
-        - XSP 580 Call expiring 261012: `US..XSP261012C00580000`
+        - SPX 5800 Call expiring 261012: `US.SPXW261012C5800000`
+        - XSP 580 Call expiring 261012: `US.XSP261012C580000`
         """
         prefix = "XSP" if is_mini_xsp else "SPXW"
         side_char = "C" if call_or_put.upper().startswith("C") else "P"
         strike_int = int(round(strike * 1000))
-        strike_str = f"{strike_int:08d}"
-        return f"US..{prefix}{expiry_yymmdd}{side_char}{strike_str}"
+        return f"US.{prefix}{expiry_yymmdd}{side_char}{strike_int}"
 
     @classmethod
     def create_0dte_iron_fly_payload(
@@ -623,10 +687,10 @@ class MoomooExecutionAdapter(ExecutionAdapter):
         s = raw_symbol.strip()
         if s.startswith("US.") or s.startswith("US.."):
             return s
-        if re.match(r"^[A-Z]{1,5}\d{6}[CP]\d{8}$", s):
-            # Standard OCC option string
-            return f"US..{s}"
-        # Standard US Equity
+        if s.upper() in ("SPX", "^SPX", ".SPX"):
+            return "US..SPX"
+        if s.upper() in ("XSP", "^XSP", ".XSP"):
+            return "US..XSP"
         return f"US.{s}"
 
     def _record_audit_event(self, action: str, details: dict[str, Any]) -> None:

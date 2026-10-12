@@ -9,3 +9,18 @@ venv/
 audit_log.json
 tools/
 *.7z
+
+# Environment variables & secrets
+.env
+.env.*
+*.env
+*.key
+*.pem
+*.secret
+*.token
+*credentials*.json
+client_secret*.json
+*.p12
+*.pkcs12
+auth_token*
+trade_password*

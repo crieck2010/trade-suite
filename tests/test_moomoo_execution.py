@@ -86,13 +86,13 @@ def test_combo_order_payload_validation():
 def test_spx_symbol_formatting():
     """Verify official Moomoo option contract symbol generation."""
     spx_call = MoomooExecutionAdapter.format_spx_option_code("261012", "C", 5800.0, is_mini_xsp=False)
-    assert spx_call == "US..SPXW261012C05800000"
+    assert spx_call == "US.SPXW261012C5800000"
 
     spx_put = MoomooExecutionAdapter.format_spx_option_code("261012", "P", 5750.0, is_mini_xsp=False)
-    assert spx_put == "US..SPXW261012P05750000"
+    assert spx_put == "US.SPXW261012P5750000"
 
     xsp_call = MoomooExecutionAdapter.format_spx_option_code("261012", "C", 580.0, is_mini_xsp=True)
-    assert xsp_call == "US..XSP261012C00580000"
+    assert xsp_call == "US.XSP261012C580000"
 
 
 def test_create_0dte_iron_fly_payload():
@@ -114,22 +114,22 @@ def test_create_0dte_iron_fly_payload():
     # Leg 1: Short ATM Call (5800)
     assert fly.legs[0].action == OrderAction.SELL
     assert fly.legs[0].strike == 5800.0
-    assert fly.legs[0].code == "US..SPXW261012C05800000"
+    assert fly.legs[0].code == "US.SPXW261012C5800000"
 
     # Leg 2: Short ATM Put (5800)
     assert fly.legs[1].action == OrderAction.SELL
     assert fly.legs[1].strike == 5800.0
-    assert fly.legs[1].code == "US..SPXW261012P05800000"
+    assert fly.legs[1].code == "US.SPXW261012P5800000"
 
     # Leg 3: Long OTM Call (5850)
     assert fly.legs[2].action == OrderAction.BUY
     assert fly.legs[2].strike == 5850.0
-    assert fly.legs[2].code == "US..SPXW261012C05850000"
+    assert fly.legs[2].code == "US.SPXW261012C5850000"
 
     # Leg 4: Long OTM Put (5750)
     assert fly.legs[3].action == OrderAction.BUY
     assert fly.legs[3].strike == 5750.0
-    assert fly.legs[3].code == "US..SPXW261012P05750000"
+    assert fly.legs[3].code == "US.SPXW261012P5750000"
 
 
 def test_simulated_order_execution(sim_adapter: MoomooExecutionAdapter, temp_audit_log: Path):
