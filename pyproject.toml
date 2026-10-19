@@ -24,6 +24,8 @@ dependencies = [
 [project.optional-dependencies]
 live = ["yfinance"]
 test = ["pytest"]
+execution = ["moomoo-api"]
+dashboard = ["streamlit"]
 
 [project.scripts]
 trade-suite = "trade_suite.cli:main"

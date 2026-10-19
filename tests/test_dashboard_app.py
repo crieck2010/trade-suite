@@ -1,7 +1,10 @@
 """Unit tests for trade_dashboard_app services, data contracts, and audit logging."""
 
+import importlib.util
 import os
 from pathlib import Path
+
+import pytest
 from trade_dashboard_app.services import (
     PortfolioMetrics,
     Position,
@@ -232,6 +235,16 @@ def test_stress_service_evaluations():
     assert curve[-1]["SPX Move (%)"] == 5.0
 
 
+# streamlit is an optional dependency (pyproject 'dashboard' extra).
+# The tab modules import it at module level, so this test — the only one
+# that renders a tab — skips cleanly on machines without it.
+requires_streamlit = pytest.mark.skipif(
+    importlib.util.find_spec("streamlit") is None,
+    reason="streamlit not installed (optional 'dashboard' extra)",
+)
+
+
+@requires_streamlit
 def test_field_service_and_telemetry():
     from trade_dashboard_app.services import (
         FieldTelemetry,

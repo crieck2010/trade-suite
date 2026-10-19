@@ -210,6 +210,15 @@ and versioning follows [Semantic Versioning](https://semver.org/).
   as-of mismatch / bad regime / wrong-type errors, adapter shape,
   report validation.
 
+### Fixed
+- Optional dependencies declared and test-guarded (Route B): `moomoo-api`
+  (`trade_execution`) and `streamlit` (`trade_dashboard_app`) are now
+  optional extras in `pyproject.toml` (`execution`, `dashboard`) instead of
+  undeclared requirements. Tests that exercise SDK/UI-shaped paths
+  (`test_moomoo_execution.py` x2, `test_dashboard_app.py` x1) skip cleanly
+  via `pytest.mark.skipif` on machines without the extras and run in full
+  where they are installed. No production code changes.
+
 ## [0.7.0] - 2026-09-26
 
 ### Added

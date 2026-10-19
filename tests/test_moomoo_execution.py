@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
 import pytest
@@ -21,6 +22,15 @@ from trade_execution.models import (
     SecurityType,
 )
 from trade_execution.moomoo_adapter import MoomooAdapterConfig, MoomooExecutionAdapter
+
+
+# The moomoo-api SDK is an optional dependency (pyproject 'execution'
+# extra). Tests that exercise SDK-shaped adapter paths skip cleanly on
+# machines without it; everywhere else in this file is SDK-free.
+requires_moomoo_sdk = pytest.mark.skipif(
+    importlib.util.find_spec("moomoo") is None,
+    reason="moomoo-api SDK not installed (optional 'execution' extra)",
+)
 
 
 @pytest.fixture
@@ -132,6 +142,7 @@ def test_create_0dte_iron_fly_payload():
     assert fly.legs[3].code == "US.SPXW261012P5750000"
 
 
+@requires_moomoo_sdk
 def test_simulated_order_execution(sim_adapter: MoomooExecutionAdapter, temp_audit_log: Path):
     """Verify paper trading order execution and atomic audit logging."""
     order = OrderPayload(
@@ -183,6 +194,7 @@ def test_simulated_combo_execution(sim_adapter: MoomooExecutionAdapter, temp_aud
     assert len(combo_log[0]["details"]["legs"]) == 4
 
 
+@requires_moomoo_sdk
 def test_account_and_positions_query(sim_adapter: MoomooExecutionAdapter):
     """Verify account and positions querying."""
     account = sim_adapter.get_account()
