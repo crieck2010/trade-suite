@@ -7,6 +7,21 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `trade_press`: Narrative Momentum Engine (press listener) v0.1.0 — Phase 1
+  per `2026-10-19_press-listener-spec_v0.1.0.md`. Listens to the financial
+  press by narrative theme (sibling of `trade_sentiment`): Google News RSS by
+  theme query (keyless, stdlib-only), a deterministic keyword classifier with
+  stored hits, tone from the shared `trade_sentiment` lexicon (lazy import),
+  and a point-in-time SQLite archive (dual `observed_at`/`recorded_at`
+  timestamps, content-hash dedupe, no backfill). Daily rollups compute a
+  frequency z-score vs a 30-day baseline plus a 7-day polarity slope and
+  apply the frozen spec §8 momentum conventions (`RISING`/`STEADY`/`FADING`/
+  `INSUFFICIENT_DATA` — documented conventions, not fitted). Emits the frozen
+  `press.observation.v1` and `press.narrative_state.v1` payloads into the
+  agents' `market_context` via `context.narrative_input()` (strict as-of).
+  Ships theme pack `ai_infrastructure_capex` v1.0.0, CLI (`scan`/`rollup`/
+  `state`/`themes`/`policy`), engine README, and 42 tests. Research-only:
+  context, never a signal; no existing module modified.
 - `trade_dashboard_app`: Streamlit-first Broker-Grade Agentic Trading Dashboard
   (v1.3.0). Implements the command center architecture specified in
   `Trading_Dashboard_Architecture_Spec_v1.1.0.md` and
