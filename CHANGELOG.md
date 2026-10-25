@@ -7,6 +7,20 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `trade_campaign`: paper-campaign runner v0.1.0 (live-roadmap
+  Phase 2). Runs one validated strategy (REGCOND-1) as a
+  trade-incubate program on a SIMULATE account: deterministic strategy
+  replay with a session watermark, monthly target-weight rebalances
+  sized by the program's stage multiplier, marketable-limit orders
+  through the safety kernel inside the broker adapter, per-symbol cost
+  basis with closed-trade accounting, day records in the incubation
+  ledger, and the phone digest written per session. Paper-only by
+  construction (`CampaignConfig` refuses non-SIMULATE envs). Launcher:
+  `scripts/run_regcond1_campaign.py` (OpenD paper account on the host;
+  `--dry-run`, `--source demo`, `--allow-offline` for plumbing).
+  Campaign safety posture: AUTONOMOUS approval, no daily-loss breaker
+  (the incubation kill conditions govern drawdown for this
+  hold-through strategy), 105% exposure cap, 10% margin-cushion floor.
 - `trade_safety`: execution safety kernel v0.1.0 (live-roadmap Phase 1).
   Broker-agnostic, stdlib-only latch service every order must pass:
   E-Stop latch (named-actor reset), daily-loss circuit breaker with
