@@ -8,6 +8,7 @@ plain dicts so the rest of the engine never touches engine types.
 from __future__ import annotations
 
 import random
+import zlib
 from datetime import datetime, timedelta, timezone
 
 CRYPTO_SUFFIXES = ("-USD", "/USD", "USD")
@@ -29,7 +30,7 @@ def normalize_symbol(symbol: str) -> str:
 
 
 def synth_bars(symbol: str, n: int = 250, seed: int = 11) -> list[dict]:
-    rng = random.Random(seed + abs(hash(symbol)) % 997)
+    rng = random.Random(seed + zlib.crc32(symbol.encode("utf-8")) % 997)
     bars, price = [], 100.0
     t = datetime(2024, 1, 2, tzinfo=timezone.utc)
     for i in range(n):

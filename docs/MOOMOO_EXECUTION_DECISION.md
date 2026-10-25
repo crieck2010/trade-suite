@@ -49,9 +49,33 @@ conclusion is superseded:
 | # | Question | How it gets answered | Phase |
 |---|---|---|---|
 | 1 | Can `moomoo-api` place an atomic multi-leg **options combo order** (e.g. iron fly) in SIMULATE? | `scripts/spike_combo_order_simulate.py` on Charlie's PC (OpenD, paper account) | 0 |
-| 2 | What is Moomoo's current **intraday margin** house policy for a small US margin account, post-PDT-elimination (FINRA Rule 4210 amendments, effective 2026-06-04; broker phase-in to 2027-10-20)? | Written question to Moomoo support; answer filed with this record | 0/4 |
+| 2 | ~~What is Moomoo's current **intraday margin** house policy for a small US margin account, post-PDT-elimination?~~ **ANSWERED 2026-10-25** (Moomoo FAQ, supplied by Charlie) | See "Intraday margin — Moomoo's answer" below | 0 |
 | 3 | Does Moomoo offer **SPX/XSP index options** trading to this account, and are they API-placeable? | App/API check during the Phase 3 0DTE track | 3 |
 | 4 | OpenD unlock/session durability under the adapter (timeout, reconnect semantics) | Phase 1 watchdog build + drills | 1 |
+
+## Intraday margin — Moomoo's answer (2026-10-25)
+
+Per Moomoo's published FAQ on the FINRA Rule 4210(d)(2) intraday margin
+rules (effective 2026-06-04), supplied by Charlie:
+
+- **PDT is fully gone at Moomoo**: no $25,000 minimum equity, no day-trade
+  counting, no PDT flagging; pre-existing flags were removed automatically.
+- Accounts are monitored in real time via an **Intraday Margin Level
+  (IML)**: `IML = Equity Liquidation Value (ELV) − SRO Maintenance Margin
+  Requirement`. SRO MMR is 25% for long marginable stock, 30% for shorts,
+  100% for non-marginable stock. **ELV excludes option market value.**
+- IML updates after each transaction and at the end-of-day snapshot. A
+  sufficiently negative IML creates an **Intraday Margin Deficit (IMD)**,
+  which can trigger a margin call, **forced liquidation**, or added
+  restrictions. IML/IMD may not be displayed in the client interface.
+- Margin accounts only; cash accounts follow settlement rules as before.
+
+**Design consequence (Phase 1):** the safety kernel tracks a margin-cushion
+check — (equity − maintenance margin) as a share of equity, with a
+configurable minimum buffer — and blocks new risk-increasing orders before
+the cushion approaches the broker's liquidation zone. The adapter's
+`AccountState.maintenance_margin` is the available proxy for the SRO MMR;
+the kernel treats it as approximate (ELV's option exclusion noted).
 
 ## Consequences
 

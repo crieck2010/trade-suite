@@ -6,6 +6,43 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `trade_safety`: execution safety kernel v0.1.0 (live-roadmap Phase 1).
+  Broker-agnostic, stdlib-only latch service every order must pass:
+  E-Stop latch (named-actor reset), daily-loss circuit breaker with
+  session lockout, per-trade and total-exposure caps, margin-cushion
+  guard (Moomoo IML proxy), approval policy engine
+  (approve / veto-window / autonomous), pre-flight checklist, heartbeat
+  watchdog (trip → E-Stop + cancel-all callback), JSON audit writer
+  shared with the adapters. 32 new tests; drills in
+  `scripts/drill_safety_kernel.py` (all passing; log in `docs/logs/`).
+- Moomoo adapter wiring (opt-in): `MoomooAdapterConfig.safety_config`
+  makes `place_order` / `place_combo_order` consult the kernel and
+  raises `SafetyBlockedError` (new exception) with the gate's reasons.
+  Default behavior unchanged when no config is supplied.
+- `docs/MOOMOO_EXECUTION_DECISION.md`: open question #2 answered —
+  Moomoo's intraday-margin (IML) policy per its FINRA Rule 4210(d)(2)
+  FAQ (PDT fully removed; IML = ELV − SRO MMR; forced-liquidation zone
+  documented), with the kernel's margin-cushion design consequence.
+
+### Fixed
+- Deterministic demo data: `synth_bars` in `trade_dashboard_web`,
+  `trade_dashboard_desktop`, and `trade_paper` seeded its RNG with
+  `abs(hash(symbol))` — Python string hashing is randomized per process,
+  so the "deterministic" demo series differed on every run. Among other
+  symptoms, `test_research_lab.py::test_pairs_demo` passed or failed by
+  coin flip (the screen sometimes found no pair and the test indexed
+  `[0]`), turning CI results into noise that masked real signals during
+  Phases 0–1. Seeds now use `zlib.crc32(symbol)` — stable across
+  processes and platforms.
+- Fail-closed REAL mode in the Moomoo adapter: with a dead OpenD
+  gateway, REAL orders and combos now raise `OpenDConnectionError` /
+  `LiveSafetyError` instead of degrading into the offline simulation;
+  `_simulate_combo_execution` refuses REAL outright. The simulation
+  fallback remains SIMULATE-only.
+- `scripts/spike_combo_order_simulate.py`: combo attempt now uses the
+  adapter's verified call shape (`combo_leg_list` of `ft.ComboLeg`).
+
 ## [1.1.0] - 2026-10-25
 
 Live-roadmap Phase 0 release. (The v1.0.0 tag was cut 2026-10-10 without
