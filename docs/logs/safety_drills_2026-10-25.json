@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-25",
+  "suite": "trade_safety Phase 1 drills",
+  "all_passed": true,
+  "results": [
+    {
+      "drill": "1_estop_mid_run",
+      "passed": true,
+      "evidence": {
+        "order_allowed_before": true,
+        "order_allowed_during_estop": false,
+        "order_allowed_after_reset": true,
+        "audit_actions": [
+          "SAFETY_CHECK_PASS",
+          "SAFETY_ESTOP_ENGAGED",
+          "SAFETY_CHECK_BLOCK",
+          "SAFETY_ESTOP_RESET",
+          "SAFETY_CHECK_PASS"
+        ]
+      }
+    },
+    {
+      "drill": "2_daily_loss_breaker",
+      "passed": true,
+      "evidence": {
+        "order_allowed_on_losing_snapshot": false,
+        "block_reasons": [
+          "daily-loss breaker tripped; session locked out"
+        ],
+        "breaker_tripped": true,
+        "alert_sent": true,
+        "still_blocked_after_estop_reset": true,
+        "audit_actions": [
+          "SAFETY_BREAKER_TRIP",
+          "SAFETY_ESTOP_ENGAGED",
+          "SAFETY_CHECK_BLOCK",
+          "SAFETY_ESTOP_RESET",
+          "SAFETY_CHECK_BLOCK"
+        ]
+      }
+    },
+    {
+      "drill": "3_watchdog_heartbeat_loss",
+      "passed": true,
+      "evidence": {
+        "healthy_before_silence": true,
+        "tripped_sources": [
+          "opend"
+        ],
+        "cancel_callback_fired_for": [
+          "opend"
+        ],
+        "estop_engaged": true,
+        "audit_actions": [
+          "SAFETY_ESTOP_ENGAGED"
+        ]
+      }
+    }
+  ]
+}
