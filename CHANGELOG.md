@@ -6,6 +6,19 @@ and versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-25
+
+Live-roadmap Phase 0 release. (The v1.0.0 tag was cut 2026-10-10 without
+its own changelog section; everything below accumulated since [0.7.0].)
+Headlines: the Moomoo execution adapter (SIMULATE verified; REAL latched
+off by default), the Mattermost/Tailscale orchestrator gateway, the
+ThetaData v3 streaming pipeline, the Streamlit command center with 0DTE /
+stress-test / field tabs, `trade_press`, and the Route B + Route C
+optional-dependency fixes that returned CI to green (red since
+2026-10-12). Repo hardening: Dependabot + secret scanning with push
+protection enabled; `docs/MOOMOO_EXECUTION_DECISION.md` records Moomoo
+as the execution broker of record.
+
 ### Added
 - `trade_press`: Narrative Momentum Engine (press listener) v0.1.0 — Phase 1
   per `2026-10-19_press-listener-spec_v0.1.0.md`. Listens to the financial
