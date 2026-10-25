@@ -3,6 +3,13 @@
 from datetime import date, datetime, timezone
 import pytest
 
+# The streaming client needs the optional 'websockets' package
+# (pyproject 'streaming' extra); skip this module cleanly without it.
+pytest.importorskip(
+    "websockets",
+    reason="websockets not installed (optional 'streaming' extra)",
+)
+
 from trade_data_options.models import OptionRight
 from trade_data_options.streaming import (
     ConnectionState,

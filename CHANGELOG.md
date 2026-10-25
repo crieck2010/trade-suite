@@ -218,6 +218,15 @@ and versioning follows [Semantic Versioning](https://semver.org/).
   (`test_moomoo_execution.py` x2, `test_dashboard_app.py` x1) skip cleanly
   via `pytest.mark.skipif` on machines without the extras and run in full
   where they are installed. No production code changes.
+- Optional `websockets` dependency declared and guarded (Route C):
+  `trade_data_options.streaming` needs `websockets`, now the `streaming`
+  extra in `pyproject.toml`. The streaming tests skip cleanly without it
+  (`importorskip`), and `trade_data_options/__init__.py` no longer imports
+  the streaming submodule eagerly — the core options engine imports on a
+  bare install, with the streaming names dropped from `__all__` when the
+  extra is absent. Fixes CI collection failure on master (red since
+  2026-10-12) and two `test_env` consistency failures that only appeared
+  on clean machines.
 
 ## [0.7.0] - 2026-09-26
 

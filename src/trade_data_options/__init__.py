@@ -45,14 +45,19 @@ from .pricing import bs_greeks, bs_price, implied_volatility, intrinsic_value
 from .providers import OptionsDataProvider, RawChain, YFinanceOptionsProvider
 from .symbols import parse_occ, to_occ
 from .times import ZERO_DTE_YEARS, time_to_expiry
-from .streaming import (
-    ConnectionState,
-    LiveEMDecayStreamEvent,
-    LiveQuote,
-    LiveStraddleQuote,
-    ThetaData0DTEStreamingPipeline,
-    ThetaDataWebSocketClient,
-)
+try:
+    from .streaming import (
+        ConnectionState,
+        LiveEMDecayStreamEvent,
+        LiveQuote,
+        LiveStraddleQuote,
+        ThetaData0DTEStreamingPipeline,
+        ThetaDataWebSocketClient,
+    )
+
+    _STREAMING_AVAILABLE = True
+except ImportError:  # optional 'streaming' extra (websockets) not installed
+    _STREAMING_AVAILABLE = False
 
 __version__ = "0.3.0"
 
@@ -109,3 +114,20 @@ __all__ = [
     "to_occ",
     "volatility_smile",
 ]
+
+if not _STREAMING_AVAILABLE:
+    # The core engine must import cleanly without the optional
+    # 'streaming' extra; drop the streaming names from the public API.
+    __all__ = [
+        name
+        for name in __all__
+        if name
+        not in {
+            "ConnectionState",
+            "LiveEMDecayStreamEvent",
+            "LiveQuote",
+            "LiveStraddleQuote",
+            "ThetaData0DTEStreamingPipeline",
+            "ThetaDataWebSocketClient",
+        }
+    ]

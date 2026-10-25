@@ -26,6 +26,7 @@ live = ["yfinance"]
 test = ["pytest"]
 execution = ["moomoo-api"]
 dashboard = ["streamlit"]
+streaming = ["websockets"]
 
 [project.scripts]
 trade-suite = "trade_suite.cli:main"
