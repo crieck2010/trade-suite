@@ -6,6 +6,11 @@
 **Execution Target:** Production Brokerage Integration for Equities (REGCOND-1) & 0DTE Options (Perryman Iron-Fly)  
 **Author:** Antigravity (Advanced Agentic Pair Programmer) for Charlie Rieck & Meta Muse  
 
+> **Superseded in part (2026-10-25):** the broker recommendation below no
+> longer governs. See `MOOMOO_EXECUTION_DECISION.md` — Moomoo is the
+> execution broker of record. This document is retained as analysis; its
+> instrument discussion (SPX/XSP vs SPY, multi-leg atomicity) still stands.
+
 ---
 
 ## 1. Executive Summary & Recommendation

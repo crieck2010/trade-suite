@@ -1,0 +1,14 @@
+# Dependabot configuration — weekly update PRs for Python dependencies
+# and GitHub Actions. Added 2026-10-25 (live-roadmap Phase 0 hardening).
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
