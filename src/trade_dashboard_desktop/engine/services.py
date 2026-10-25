@@ -15,6 +15,7 @@ import json
 import math
 import os
 import random
+import zlib
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -51,7 +52,7 @@ def bar_to_dict(bar) -> dict:
 
 def synth_bars(symbol: str, n: int = 250, start: float = 100.0, seed: int = 7) -> list[dict]:
     """Deterministic demo bars with three regimes (up / chop / down)."""
-    rng = random.Random(seed + abs(hash(symbol)) % 997)
+    rng = random.Random(seed + zlib.crc32(symbol.encode("utf-8")) % 997)
     bars, price = [], start
     t = datetime(2024, 1, 2, tzinfo=timezone.utc)
     for i in range(n):

@@ -26,6 +26,15 @@ and versioning follows [Semantic Versioning](https://semver.org/).
   documented), with the kernel's margin-cushion design consequence.
 
 ### Fixed
+- Deterministic demo data: `synth_bars` in `trade_dashboard_web`,
+  `trade_dashboard_desktop`, and `trade_paper` seeded its RNG with
+  `abs(hash(symbol))` — Python string hashing is randomized per process,
+  so the "deterministic" demo series differed on every run. Among other
+  symptoms, `test_research_lab.py::test_pairs_demo` passed or failed by
+  coin flip (the screen sometimes found no pair and the test indexed
+  `[0]`), turning CI results into noise that masked real signals during
+  Phases 0–1. Seeds now use `zlib.crc32(symbol)` — stable across
+  processes and platforms.
 - Fail-closed REAL mode in the Moomoo adapter: with a dead OpenD
   gateway, REAL orders and combos now raise `OpenDConnectionError` /
   `LiveSafetyError` instead of degrading into the offline simulation;
