@@ -75,3 +75,20 @@ SIMULATE. See `tests/test_moomoo_safety_wiring.py`.
 (E-Stop mid-run, breaker trip, watchdog trip) and writes a dated log to
 `docs/logs/`. The phase gate also wants the drills repeated on Charlie's
 PC against OpenD paper; the script runs there unchanged.
+
+## Wakeup triggers & read-back verification (2026-11-24)
+
+Two patterns adopted from an LLM trading-desk design Charlie reviewed
+(see the module docstrings for provenance):
+
+- `trade_safety.wakeups.WakeupEngine` — event-driven wakeups instead
+  of fixed-cadence polling. A watcher arms price-level triggers (the
+  D-004 software-monitored stop), order-event triggers (fills,
+  cancels, rejects), and a safety clock that bounds any sleep. The
+  host feeds observations; the engine owns no thread, like the
+  watchdog.
+- `trade_execution.readback` + `MoomooExecutionAdapter.verify_order_readback`
+  — after any placement, re-query the broker's order list and verify
+  presence, status, and filled quantity before treating the order as
+  live. A submit response is a claim, not a fact; read-back outcomes
+  are audit-logged as `MOOMOO_ORDER_READBACK`.
