@@ -49,6 +49,7 @@ from .models import (
     TimeInForce,
     utcnow_str,
 )
+from .readback import ReadbackReport, verify_execution
 
 logger = logging.getLogger(__name__)
 
@@ -595,6 +596,45 @@ class MoomooExecutionAdapter(ExecutionAdapter):
         except Exception as exc:
             logger.warning("Error querying Moomoo orders: %s", exc)
             return []
+
+    def verify_order_readback(
+        self,
+        result: ExecutionResult,
+        *,
+        expect_statuses: list[str] | None = None,
+        expect_filled_qty: float | None = None,
+        attempts: int = 3,
+        delay_s: float = 0.5,
+    ) -> ReadbackReport:
+        """Read back a placed order from the broker and verify its state.
+
+        A submit response is a claim, not a fact (see
+        :mod:`trade_execution.readback`). This re-queries the order
+        list and compares presence, status, and filled quantity against
+        the expectation. The outcome is audit-logged either way; a
+        failed read-back is returned, not raised, so the caller decides
+        how to halt — but callers must not treat the order as live
+        until this verifies.
+        """
+        report = verify_execution(
+            self,
+            result,
+            expect_statuses=expect_statuses,
+            expect_filled_qty=expect_filled_qty,
+            attempts=attempts,
+            delay_s=delay_s,
+        )
+        self._record_audit_event("MOOMOO_ORDER_READBACK", {
+            "order_id": report.order_id,
+            "verified": report.verified,
+            "found": report.found,
+            "observed_status": report.observed.status if report.observed else None,
+            "observed_filled_qty": report.observed.filled_qty if report.observed else None,
+            "mismatches": report.mismatches,
+            "attempts_used": report.attempts_used,
+            "env": self.cfg.env.value,
+        })
+        return report
 
     # -------------------------------------------------------------------------
     # Helper & Geometry Builders (0DTE European SPX / XSP Iron-Fly)

@@ -15,6 +15,15 @@ from .models import AccountSnapshot, Decision, OrderIntent
 from .policy import ApprovalMode, AutoApprover, CallbackApprover, authorize
 from .preflight import PreflightReport, run_preflight
 from .state import SafetyState
+from .wakeups import (
+    CrossDirection,
+    OrderEventTrigger,
+    PriceLevelTrigger,
+    SafetyClockTrigger,
+    WakeupEngine,
+    WakeupEvent,
+    WakeupKind,
+)
 from .watchdog import Watchdog
 
 __version__ = "0.1.0"
@@ -24,17 +33,24 @@ __all__ = [
     "ApprovalMode",
     "AutoApprover",
     "CallbackApprover",
+    "CrossDirection",
     "Decision",
     "JsonAuditWriter",
     "MattermostWebhookSink",
     "MemoryAlertSink",
     "MemoryAuditWriter",
     "NullAlertSink",
+    "OrderEventTrigger",
     "OrderIntent",
     "PreflightReport",
+    "PriceLevelTrigger",
+    "SafetyClockTrigger",
     "SafetyConfig",
     "SafetyKernel",
     "SafetyState",
+    "WakeupEngine",
+    "WakeupEvent",
+    "WakeupKind",
     "Watchdog",
     "__version__",
     "authorize",
