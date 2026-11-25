@@ -11,6 +11,7 @@ Bars are normalized to plain dicts so the JSON API never leaks engine types.
 from __future__ import annotations
 
 import random
+import zlib
 from datetime import datetime, timedelta, timezone
 
 
@@ -41,7 +42,7 @@ def bar_to_dict(bar) -> dict:
 
 def synth_bars(symbol: str, n: int = 250, start: float = 100.0, seed: int = 7) -> list[dict]:
     """Deterministic demo bars with three regimes (up / chop / down)."""
-    rng = random.Random(seed + abs(hash(symbol)) % 997)
+    rng = random.Random(seed + zlib.crc32(symbol.encode("utf-8")) % 997)
     bars, price = [], start
     t = datetime(2024, 1, 2, tzinfo=timezone.utc)
     for i in range(n):

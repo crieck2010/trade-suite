@@ -7,8 +7,11 @@ Safety Guarantees:
 1. `REAL` trading requires `allow_live_trading=True` AND explicit trade password unlock.
 2. Mandatory human-in-the-loop gate: Charlie must authorize live orders.
 3. Every order submission, cancel, and unlock event writes atomically to `audit_log.json`.
-4. Fail-soft simulation fallback: If OpenD is offline, operates in high-fidelity
-   simulation mode without crashing research/paper workflows.
+4. Simulation fallback is SIMULATE-only: If OpenD is offline in paper mode,
+   operates in high-fidelity simulation mode without crashing research/paper
+   workflows. In REAL mode the adapter is fail-closed (Phase 1): a dead
+   gateway raises instead of simulating, and when a `SafetyConfig` is
+   supplied every order must pass the `trade_safety` kernel first.
 """
 
 from __future__ import annotations
@@ -28,6 +31,7 @@ from .exceptions import (
     LiveSafetyError,
     OpenDConnectionError,
     OrderRejectionError,
+    SafetyBlockedError,
     TradeUnlockError,
 )
 from .models import (
@@ -81,6 +85,11 @@ class MoomooAdapterConfig:
     account_index: int = 0
     unlock_password: str = ""
     allow_live_trading: bool = False  # Hard safety latch: must be explicitly True for REAL
+    # Safety kernel (trade_safety) — opt-in. Pass a SafetyConfig to make
+    # every order pass the kernel (E-Stop, daily-loss breaker, caps,
+    # margin cushion, approval policy). None = legacy behavior.
+    safety_config: Any = None
+    safety_state_path: Path | None = None  # default: safety_state.json beside the audit log
     audit_log_path: Path = field(
         default_factory=lambda: Path(
             os.environ.get("AUDIT_LOG_PATH", "c:/Agentic AI Algorithmic Trading System Software/audit_log.json")
@@ -117,6 +126,7 @@ class MoomooExecutionAdapter(ExecutionAdapter):
             "CPER": PositionSnapshot("CPER", 300, 26.5, 27.2, 8160.0, 210.0, 2.64, SecurityType.ETF, self.cfg.env),
         }
         self._simulated_balance = 100000.0
+        self.safety = self._build_safety_kernel()
 
         # Enable daemon threads so moomoo background workers don't block process exit
         if _MOOMOO_AVAILABLE and hasattr(ft, "SysConfig"):
@@ -336,6 +346,21 @@ class MoomooExecutionAdapter(ExecutionAdapter):
         """Submit single-leg order (e.g. RegCond-1 rebalance: SPY, TLT, GLD, CPER)."""
         self._enforce_safety_gates(order.strategy)
 
+        # Fail-closed (Phase 1): in REAL, a dead gateway is a hard stop —
+        # never degrade into the offline simulation with real money.
+        if self.cfg.env == ExecutionEnvironment.REAL and not self.is_connected():
+            raise OpenDConnectionError(
+                "REAL order refused: OpenD gateway not connected "
+                "(fail-closed; no simulation fallback in REAL)."
+            )
+        self._safety_gate(
+            symbol=order.symbol,
+            action=order.action.value,
+            quantity=order.quantity,
+            price=order.price,
+            strategy=order.strategy,
+        )
+
         formatted_code = self._format_moomoo_symbol(order.symbol)
         side = ft.TrdSide.BUY if order.action == OrderAction.BUY else ft.TrdSide.SELL
         order_type = ft.OrderType.NORMAL if order.order_type == OrderType.LIMIT else ft.OrderType.MARKET
@@ -355,6 +380,7 @@ class MoomooExecutionAdapter(ExecutionAdapter):
                 remark=f"antigravity:{order.strategy}",
                 time_in_force=order.time_in_force.value,
             )
+            self._beat_opend()  # any gateway response proves liveness
             if ret == ft.RET_OK and not data.empty:
                 order_id = str(data.iloc[0].get("order_id", ""))
                 res = ExecutionResult(
@@ -423,6 +449,25 @@ class MoomooExecutionAdapter(ExecutionAdapter):
         Guarantees zero leg-in risk.
         """
         self._enforce_safety_gates(combo.strategy)
+
+        # Fail-closed (Phase 1): REAL combos never simulate.
+        if self.cfg.env == ExecutionEnvironment.REAL:
+            if not _MOOMOO_AVAILABLE:
+                raise LiveSafetyError(
+                    "REAL combo refused: moomoo-api SDK unavailable (fail-closed)."
+                )
+            if not self.is_connected():
+                raise OpenDConnectionError(
+                    "REAL combo refused: OpenD gateway not connected (fail-closed)."
+                )
+        self._safety_gate(
+            symbol=combo.legs[0].code if combo.legs else combo.combo_type.value,
+            action="COMBO",
+            quantity=combo.quantity,
+            price=abs(combo.net_price),
+            strategy=combo.strategy,
+            multiplier=100.0,
+        )
 
         if not _MOOMOO_AVAILABLE:
             return self._simulate_combo_execution(combo)
@@ -642,6 +687,108 @@ class MoomooExecutionAdapter(ExecutionAdapter):
     # Internal Helpers & Safety Guards
     # -------------------------------------------------------------------------
 
+    # -------------------------------------------------------------------------
+    # Safety kernel integration (trade_safety, live-roadmap Phase 1)
+    # -------------------------------------------------------------------------
+
+    def _build_safety_kernel(self):
+        """Construct the safety kernel when configured.
+
+        Lazy import keeps ``trade_execution`` usable standalone; the
+        kernel is opt-in via ``MoomooAdapterConfig.safety_config``.
+        """
+        if self.cfg.safety_config is None:
+            return None
+        import trade_safety as ts
+
+        state_path = self.cfg.safety_state_path or self.cfg.audit_log_path.with_name(
+            "safety_state.json"
+        )
+        return ts.SafetyKernel(
+            config=self.cfg.safety_config,
+            state=ts.SafetyState(state_path),
+            audit=ts.JsonAuditWriter(self.cfg.audit_log_path),
+        )
+
+    def _account_snapshot(self):
+        import trade_safety as ts
+
+        if not _MOOMOO_AVAILABLE:
+            # get_account() dereferences SDK enums before its offline
+            # fallback, so without the SDK mirror that fallback directly.
+            return ts.AccountSnapshot(
+                account_id="moomoo-simulated",
+                equity=self._simulated_balance,
+                buying_power=self._simulated_balance * 4.0,
+                realized_pnl=450.0,
+                unrealized_pnl=2040.0,
+                gross_exposure=sum(
+                    abs(p.market_value) for p in self._simulated_positions.values()
+                ),
+                maintenance_margin=self._simulated_balance * 0.15,
+            )
+        acct = self.get_account()
+        gross = sum(abs(p.market_value) for p in self.get_positions())
+        return ts.AccountSnapshot(
+            account_id=acct.account_id,
+            equity=acct.net_liquidity,
+            buying_power=acct.buying_power,
+            realized_pnl=acct.realized_pnl,
+            unrealized_pnl=acct.unrealized_pnl,
+            gross_exposure=gross,
+            maintenance_margin=acct.maintenance_margin,
+        )
+
+    def _safety_gate(
+        self,
+        *,
+        symbol: str,
+        action: str,
+        quantity: float,
+        price: float | None,
+        strategy: str,
+        multiplier: float = 1.0,
+    ) -> None:
+        """Consult the safety kernel; raise SafetyBlockedError on a block."""
+        if self.safety is None:
+            return
+        import trade_safety as ts
+
+        intent = ts.OrderIntent(
+            symbol=symbol,
+            action=action,
+            quantity=quantity,
+            price=price,
+            strategy=strategy,
+            multiplier=multiplier,
+        )
+        decision = self.safety.check(intent, self._account_snapshot())
+        if not decision.allowed:
+            self._record_audit_event("SAFETY_KERNEL_BLOCK", {
+                "symbol": symbol,
+                "strategy": strategy,
+                "reasons": decision.reasons,
+                "env": self.cfg.env.value,
+            })
+            raise SafetyBlockedError(
+                f"Safety kernel blocked {symbol} ({strategy}): "
+                + "; ".join(decision.reasons),
+                reasons=decision.reasons,
+            )
+
+    def _beat_opend(self) -> None:
+        if self.safety is not None:
+            self.safety.beat("opend")
+
+    def cancel_all_open_orders(self) -> int:
+        """Best-effort cancel of every open order (watchdog trip action)."""
+        cancelled = 0
+        for order in self.query_orders():
+            order_id = str(order.get("order_id", ""))
+            if order_id and self.cancel_order(order_id):
+                cancelled += 1
+        return cancelled
+
     def _enforce_safety_gates(self, strategy: str) -> None:
         """Enforce strict standing rules before ANY order reaches execution."""
         if self.cfg.env == ExecutionEnvironment.REAL:
@@ -658,6 +805,10 @@ class MoomooExecutionAdapter(ExecutionAdapter):
 
     def _simulate_combo_execution(self, combo: ComboOrderPayload) -> ExecutionResult:
         """Simulate an atomic combo fill when offline or in test environments."""
+        if self.cfg.env == ExecutionEnvironment.REAL:
+            raise LiveSafetyError(
+                "Refusing to simulate a combo fill in REAL (fail-closed)."
+            )
         sim_order_id = f"moomoo-combo-sim-{int(datetime.now().timestamp() * 1000)}"
         res = ExecutionResult(
             success=True,

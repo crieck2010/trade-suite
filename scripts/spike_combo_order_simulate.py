@@ -128,20 +128,23 @@ def main() -> int:
             return 0
 
         # --- 4. One placement attempt (paper, qty 1), then cancel.
-        # The combo API's exact kwargs vary by SDK version; the signature
-        # captured above is part of the result either way.
-        codes = [c for c, _, _ in legs]
-        ratios = [r for _, _, r in legs]
-        sides = [s for _, s, _ in legs]
+        # Call shape mirrors the monorepo's MoomooExecutionAdapter
+        # (combo_leg_list of ft.ComboLeg). The signature captured above
+        # is part of the result either way.
+        ft_legs = []
+        for code, side, ratio in legs:
+            leg = ft.ComboLeg()
+            leg.code = code
+            leg.trd_side = side
+            leg.qty_ratio = ratio
+            ft_legs.append(leg)
         attempt_kwargs = dict(
+            combo_leg_list=ft_legs,
             price=0.05,  # nominal net-credit limit; paper spike only
-            quantity=QTY,
-            code_list=codes,
-            ratio_list=ratios,
-            side_list=sides,
+            qty=QTY,
+            order_type=ft.OrderType.NORMAL,
             trd_env=ft.TrdEnv.SIMULATE,
             acc_id=acc_id,
-            order_type=ft.OrderType.NORMAL,
         )
         try:
             ret, data = trd_ctx.place_combo_order(**attempt_kwargs)

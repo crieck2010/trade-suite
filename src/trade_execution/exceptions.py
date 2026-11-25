@@ -27,3 +27,15 @@ class OpenDConnectionError(ExecutionError):
 
 class OrderRejectionError(ExecutionError):
     """Raised when broker or exchange rejects an order."""
+
+
+class SafetyBlockedError(ExecutionError):
+    """Raised when the safety kernel (trade_safety) blocks an order.
+
+    Carries the kernel's human-readable ``reasons`` list so callers can
+    surface exactly which gate stopped the order.
+    """
+
+    def __init__(self, message: str, reasons: list[str] | None = None) -> None:
+        super().__init__(message)
+        self.reasons = reasons or []
